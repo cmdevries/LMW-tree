@@ -1,8 +1,15 @@
-vmtree
-======
+vmtree: vectorial m-way tree
+============================
 
-Vectorial m-way Tree
+This package combines several algorithms that use the m-way nearest neighbor
+tree structre to store their data.
 
-EM-tree, K-tree, k-means, TSVQ, repeated k-means, clustering, random projections, hashing, bit signatures
+The algorithms are primarily focussed of comptutationally efficient clustering.
+Clustering is an unsupervised machine learning process that finds interesting
+patterns it data. It places similar items into clusters and dissimilar items
+into different clusters.
 
-This package combines several algorithms that work on m-way nearest neighbor tree structres.
+The package includes EM-tree, K-tree, k-means, TSVQ, repeated k-means,
+clustering, random projections, hashing, bit signatures.
+
+It is licensed under the BSD license.
