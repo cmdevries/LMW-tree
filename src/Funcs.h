@@ -1,6 +1,7 @@
 #ifndef FUNCS_H
 #define FUNCS_H
 
+#include "Clusterer.h"
 #include "SVector.h"
 #include "Node.h"
 #include "BitMapList8.h"
@@ -14,8 +15,8 @@ struct euclideanDistance {
 
 	float operator()(T *t1, T *t2) {
 	
-		T::iterator it1 = t1->begin();
-		T::iterator it2 = t2->begin();
+		typename T::iterator it1 = t1->begin();
+		typename T::iterator it2 = t2->begin();
 
 		float d, sum = 0.0f;
 
@@ -35,8 +36,8 @@ struct euclideanDistanceSq {
 
 	float operator()(T *t1, T *t2) {
 	
-		T::iterator it1 = t1->begin();
-		T::iterator it2 = t2->begin();
+		typename T::iterator it1 = t1->begin();
+		typename T::iterator it2 = t2->begin();
 
 		float d, sum = 0.0f;
 

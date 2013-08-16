@@ -149,10 +149,10 @@ private:
 				                
 		// First iteration
 		vectorsToNearestCentroid(data);
+		recalculateCentroids(data);
         if (_maxIters == 0)  {
             return;
         }
-		recalculateCentroids(data);
 		
 		//if (_maxIters<=1) return;
 
@@ -261,12 +261,13 @@ private:
 		// Apply prototype function
 		for (Cluster<T> *c : _clusters) {            
 			int count = (int)(c->size());
-            if (count > 0) {
-				_protoF(c->getCentroid(), c->getNearestList(), weights);
-			}
-			//std::cout << " " << count; 
+            if (_maxIters != 0) {
+                if (count > 0) {
+				    _protoF(c->getCentroid(), c->getNearestList(), weights);
+			    }
+            }
+			std::cout << " " << count; 
         }
-
 		//std::cout << "\nRMSE: " << getRMSE(data); 
     }
 

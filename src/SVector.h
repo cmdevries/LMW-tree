@@ -281,14 +281,14 @@ public:
 		int count = 0;
 		size_t numBlocks = v1.getNumBlocks();
 		block_type *data1, *data2;
-        block_type xor;
+        block_type exor;
 
 		data1 = v1.getData();
 		data2 = v2.getData();
 
 		for (int i = 0; i < numBlocks; ++i) {
-            xor = data1[i] ^ data2[i];
-            count += popcnt64(xor);
+            exor = data1[i] ^ data2[i];
+            count += popcnt64(exor);
         }
         return count;
 	}

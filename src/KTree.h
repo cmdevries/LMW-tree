@@ -66,7 +66,7 @@ public:
         _m = order;
         _root = new Node<T>(); // initial root is a leaf
 		_clusterer.setNumClusters(2);
-		_clusterer.setMaxIters(0);	
+		_clusterer.setMaxIters(10);	
 		_added = 0;
     }
 

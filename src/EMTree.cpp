@@ -14,6 +14,7 @@
 #include "VectorGenerator.h"
 #include "KMeans.h"
 #include "BitMapList8.h"
+#include "StdIncludes.h"
 
 #include "EMTree.h"
 #include "KTree.h"
@@ -37,6 +38,10 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
 	string input = "";
 
 	emt.seed(vectors);
+    for (int i = 0; i < 2; ++i) {
+        std::cout << i << std::endl;
+        emt.EMStep();
+    }
 
 	emt.printStats();
 
@@ -62,7 +67,7 @@ void sigKTreeCluster(vector<SVector<bool>*> &vectors)  {
 	ClusterCounter<nodeType> counter;
 
 	// KTree algorithm - order 5
-	KTree<vecType, clustererType, distanceType, protoType> kt(40);
+	KTree<vecType, clustererType, distanceType, protoType> kt(80);
 
 	boost::timer::auto_cpu_timer t;
 	
@@ -97,13 +102,13 @@ void sigKTreeCluster(vector<SVector<bool>*> &vectors)  {
 	cout << "\nFinished re-arranging ...\n";
 	kt.printStats();
 
-	kt.rebuildInternal();
+	//kt.rebuildInternal();
 
 	//kt.EMStep();
 
-	cout << "\nFinished rebuilding internal ... No pruning ...\n";
+	//cout << "\nFinished rebuilding internal ... No pruning ...\n";
 
-	kt.printStats();
+	//kt.printStats();
 
 	/*
 	for (int i=0; i<75; i++) {
@@ -185,10 +190,10 @@ void testReadVectors() {
 }
 
 
-int main(int argc, char** argv[])  {
+int main(int argc, char** argv)  {
 
 	vector<SVector<bool>*> vectors;
-	string filename = "C:/Data/wikisignatures/wiki.4096.sig";
+	string filename = "data/wiki.4096.sig";
 	
 	readSignatures(vectors, filename, 4096, 400 * 1000);
 	
