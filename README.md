@@ -10,6 +10,6 @@ patterns it data. It places similar items into clusters and dissimilar items
 into different clusters.
 
 The package includes EM-tree, K-tree, k-means, TSVQ, repeated k-means,
-clustering, random projections, hashing, bit signatures.
+clustering, random projections, random indexing, hashing, bit signatures.
 
-It is licensed under the BSD license.
+vmtree is licensed under the BSD license.
