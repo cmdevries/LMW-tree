@@ -8,7 +8,7 @@ vector representations such as dense real valued and bit vectors and sparse
 vectors. Additionally, it can index any object type that can form a prototype
 representation of a set of objects.
 
-The algorithms are primarily focussed of comptutationally efficient clustering.
+The algorithms are primarily focussed on comptutationally efficient clustering.
 Clustering is an unsupervised machine learning process that finds interesting
 patterns it data. It places similar items into clusters and dissimilar items
 into different clusters. The data structures and algorithms can also be used
