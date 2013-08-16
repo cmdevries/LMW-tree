@@ -149,6 +149,9 @@ private:
 				                
 		// First iteration
 		vectorsToNearestCentroid(data);
+        if (_maxIters == 0)  {
+            return;
+        }
 		recalculateCentroids(data);
 		
 		//if (_maxIters<=1) return;

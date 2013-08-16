@@ -48,7 +48,7 @@ public:
 		_maxLeaf = maxLeaf;
         _root = new Node<T>(); // initial root is a leaf
 		_clusterer.setNumClusters(_m);
-		_clusterer.setMaxIters(1);	
+		_clusterer.setMaxIters(0);	
 		//_tp = pool::::create_pool(4); 
 		//pool::size_policy_type::
 		//_tPool.
