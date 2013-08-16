@@ -10,7 +10,7 @@ representation of a set of objects.
 
 The algorithms are primarily focussed on comptutationally efficient clustering.
 Clustering is an unsupervised machine learning process that finds interesting
-patterns it data. It places similar items into clusters and dissimilar items
+patterns in data. It places similar items into clusters and dissimilar items
 into different clusters. The data structures and algorithms can also be used
 for nearest neighbor search, supervised learning and other machine learning
 applications.
