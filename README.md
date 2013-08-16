@@ -1,10 +1,10 @@
-vmtree: vectorial m-way tree
-============================
+LMW-tree: learning m-way tree
+=============================
 
-vmtree is a generic template library written in C++ that implements several
+LMW-tree is a generic template library written in C++ that implements several
 algorithms that use the m-way nearest neighbor tree structre to store their
 data. The algorithms and data structures are generic to support different
-vector representations such as dense real valued and bit vectors and sparse
+data representations such as dense real valued and bit vectors, and sparse
 vectors. Additionally, it can index any object type that can form a prototype
 representation of a set of objects.
 
@@ -18,4 +18,4 @@ applications.
 The package includes EM-tree, K-tree, k-means, TSVQ, repeated k-means,
 clustering, random projections, random indexing, hashing, bit signatures.
 
-vmtree is licensed under the BSD license.
+LMW-tree is licensed under the BSD license.
