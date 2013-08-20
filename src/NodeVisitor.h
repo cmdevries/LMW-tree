@@ -39,6 +39,39 @@ public:
 	}
 };
 
+template <typename T>
+class ClusterHistogramCounter : public NodeVisitor<T> {
+	
+	int _count;
+	int _size;
+	vector<int> _buckets;
+
+public:
+
+	ClusterHistogramCounter<T>(int maxClusterSize) {
+		_count = 0;
+		_buckets.resize(maxClusterSize+1);
+		for (int i =0; i<_buckets.size(); i++) _buckets[i] = 0;  
+	}
+
+	~ClusterHistogramCounter<T>() {  
+	
+	}
+
+	void accept(T *node) {
+		if (node->isLeaf()) {
+			 _size = node->size();
+			_buckets[_size]++;
+		}
+	}
+
+	void report() {
+		std::cout << std::endl;
+		for (int i=0; i<_buckets.size(); i++) {
+			std::cout << _buckets[i] << std::endl;
+		}
+	}
+};
 
 
 
