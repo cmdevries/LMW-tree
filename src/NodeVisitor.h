@@ -3,6 +3,7 @@
 
 #include "Node.h"
 
+
 template <typename T>
 class NodeVisitor {
 
