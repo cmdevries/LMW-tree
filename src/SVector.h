@@ -160,8 +160,7 @@ public:
 	}
 
 	void setAllBlocks(block_type v) {		
-		for (size_t i = 0; i < _numBlocks; i++) {
-			_data[i] = v;
+		for (size_t i = 0; i < _numBlocks; i++) {			_data[i] = v;
 		}
 	}
 

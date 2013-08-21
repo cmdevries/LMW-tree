@@ -441,7 +441,7 @@ void logMsg(char* reason, int i)
 template <typename T, typename ClustererType>
 struct seedTask {
 
-	static void seed (Node<T>* current, int m, int maxLeaf) {
+	static void seed (Node<T>* current, int m, int depth) {
 
 		
 		ClustererType clusterer;
@@ -453,7 +453,7 @@ struct seedTask {
 
 		Node<T> *child;
 
-		if (current->size() <= maxLeaf) {
+		if (depth == 1) {
 			//cout << "\n*";
 			return;
 		} else {
@@ -463,10 +463,10 @@ struct seedTask {
 			// with recursion.
 			vector<Cluster<T>*> clusters = clusterer.cluster(current->getKeys());
 
-			if (clusters.size() < m) { // split didn't work, so stop
-				cout << "\nBad split ...";
-				return;
-			}
+//			if (clusters.size() < m) { // split didn't work, so stop
+//				cout << "\nBad split ...";
+//				return;
+//			}
 
 			// make keys centroids from k-means and children the nearest neigbhours
 			current->clearKeysAndChildren();
@@ -490,7 +490,7 @@ struct seedTask {
 			for (Node<T>* n : children) {
 
 				// Seed each of the children
-				seed2(n, clusterer, m, maxLeaf);
+				seed2(n, clusterer, m, depth - 1);
 
 			}
 
@@ -499,7 +499,7 @@ struct seedTask {
 	}
 
 
-	static void seed2 (Node<T>* current, ClustererType &clusterer, int m, int maxLeaf) {
+	static void seed2 (Node<T>* current, ClustererType &clusterer, int m, int depth) {
 
 				
 		//cout << "\nHello";
@@ -507,7 +507,7 @@ struct seedTask {
 
 		Node<T> *child;
 
-		if (current->size() <= maxLeaf) {
+		if (depth == 1) {
 			//cout << "\n*";
 			return;
 		} else {
@@ -517,10 +517,10 @@ struct seedTask {
 			// with recursion.
 			vector<Cluster<T>*> clusters = clusterer.cluster(current->getKeys());
 
-			if (clusters.size() < m) { // split didn't work, so stop
-				cout << "\nBad split ...";
-				return;
-			}
+//			if (clusters.size() < m) { // split didn't work, so stop
+//				cout << "\nBad split ...";
+//				return;
+//			}
 
 			// make keys centroids from k-means and children the nearest neigbhours
 			current->clearKeysAndChildren();
@@ -544,7 +544,7 @@ struct seedTask {
 			for (Node<T>* n : children) {
 
 				// Seed each of the children
-				seed2(n, clusterer, m, maxLeaf);
+				seed2(n, clusterer, m, depth - 1);
 
 			}
 

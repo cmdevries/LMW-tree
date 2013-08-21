@@ -7,29 +7,24 @@
 #include "KMeans.h"
 #include "NodeVisitor.h"
 
-
-template <typename T> 
+template <typename T>
 struct SplitResult {
+    bool isSplit;
 
-	bool isSplit;
-
-	T *_key1;
+    T *_key1;
     T *_key2;
-	
-	Node<T> *_child1;
-	Node<T> *_child2;
 
-	SplitResult() {
-		isSplit = false;
-	}
+    Node<T> *_child1;
+    Node<T> *_child2;
+
+    SplitResult() {
+        isSplit = false;
+    }
 
 };
 
-
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class KTree {
-
-
 private:
 
     // The order of this tree
@@ -38,36 +33,37 @@ private:
     // The root of the tree.
     Node<T> *_root;
 
-	ClustererType _clusterer;
+    ClustererType _clusterer;
 
-	DistanceType _distF;
-	ProtoType _protoF;
+    DistanceType _distF;
+    ProtoType _protoF;
 
-	// Use this for splits instead of creating
-	// a new one every time a split is performed.
-	SplitResult<T> _splitR;
+    // Use this for splits instead of creating
+    // a new one every time a split is performed.
+    SplitResult<T> _splitR;
 
-	// Use these containers so as not to create new ones
-	// every time we split
-	vector<T*> tempKeys;
-	vector<Node<T>*> tempChildren;
-	vector<size_t> tempNearCentroids;
+    // Use these containers so as not to create new ones
+    // every time we split
+    vector<T*> tempKeys;
+    vector<Node<T>*> tempChildren;
+    vector<size_t> tempNearCentroids;
 
-	vector<T*> removed;
+    vector<T*> removed;
 
-	// Weights for prototype function (we don't have to use these)
+    // Weights for prototype function (we don't have to use these)
     vector<int> weights;
 
-	size_t _added;
-	
+    size_t _added;
+
 public:
 
-    KTree( int order ) {        
+    KTree(int order) {
         _m = order;
         _root = new Node<T>(); // initial root is a leaf
-		_clusterer.setNumClusters(2);
-		_clusterer.setMaxIters(10);	
-		_added = 0;
+        _clusterer.setNumClusters(2);
+        _clusterer.setMaxIters(10);
+        _clusterer.setEnforceNumClusters(true);
+        _added = 0;
     }
 
     int getClusterCount() {
@@ -86,15 +82,15 @@ public:
         return levelCount(_root);
     }
 
-	void printStats() {
-		std::cout << "\nNumber of objects: " << getObjCount();
-		std::cout << "\nCluster count: " << getClusterCount();
-		std::cout << "\nEmpty Cluster count: " << getEmptyClusterCount();
-		std::cout << "\nLevel count: " << getLevelCount();
-		std::cout << "\nRMSE: " << getRMSE();
-	}
+    void printStats() {
+        std::cout << "\nNumber of objects: " << getObjCount();
+        std::cout << "\nCluster count: " << getClusterCount();
+        std::cout << "\nEmpty Cluster count: " << getEmptyClusterCount();
+        std::cout << "\nLevel count: " << getLevelCount();
+        std::cout << "\nRMSE: " << getRMSE();
+    }
 
-	void EMStep() {
+    void EMStep() {
 
         rearrange();
         int pruned = 1;
@@ -102,22 +98,22 @@ public:
             pruned = prune();
         }
         rebuildInternal();
-	}
+    }
 
-	void rearrange() {
-				
-		removeData(_root, removed);
+    void rearrange() {
 
-        for (int i=0; i<removed.size(); i++) {
+        removeData(_root, removed);
+
+        for (int i = 0; i < removed.size(); i++) {
             pushDownNoUpdate(_root, removed[i]);
         }
 
-		removed.clear();
+        removed.clear();
     }
 
-	int prune() {
-		return prune(_root);
-	}
+    int prune() {
+        return prune(_root);
+    }
 
     void rebuildInternal() {
         // rebuild starting with above leaf level (bottom up)
@@ -126,18 +122,17 @@ public:
         }
     }
 
-	
     void add(T *obj) {
-		//std::cout << "\nAdding object ... ";
-		_added++;
+        //std::cout << "\nAdding object ... ";
+        _added++;
 
-		if (_added%1000==0) cout << "\n\nAdded ... " << _added;
+        if (_added % 1000 == 0) cout << "\n\nAdded ... " << _added;
 
-		SplitResult<T> result = pushDown(_root, obj);
+        SplitResult<T> result = pushDown(_root, obj);
         if (result.isSplit) {
-			_root = new Node<T>();
-			_root->add(result._key1, result._child1);
-			_root->add(result._key2, result._child2);
+            _root = new Node<T>();
+            _root->add(result._key1, result._child1);
+            _root->add(result._key2, result._child2);
         }
     }
 
@@ -145,14 +140,13 @@ public:
         return RMSE();
     }
 
-
     void visit(NodeVisitor<Node<T> > &visitor) {
-		visit(visitor, _root);
-	}
+        visit(visitor, _root);
+    }
 
     void visit(NodeVisitor<Node<T> > &visitor, int depth) {
-		visit(visitor, _root, depth);
-	}
+        visit(visitor, _root, depth);
+    }
 
 
 
@@ -160,83 +154,81 @@ private:
 
     double RMSE() {
         double RMSE = sumSquaredError(NULL, _root);
-		int size = getObjCount();
+        int size = getObjCount();
         RMSE /= size;
         RMSE = sqrt(RMSE);
         return RMSE;
     }
 
     void visit(NodeVisitor<Node<T> > &visitor, Node<T> *node) {
-		
-		visitor.accept(node);
-		
-		if (!node->isLeaf()) {
-			vector<Node<T>*> &children = node->getChildren(); 
-			for (Node<T> *child : children) {
+
+        visitor.accept(node);
+
+        if (!node->isLeaf()) {
+            vector<Node<T>*> &children = node->getChildren();
+            for (Node<T> *child : children) {
                 visit(visitor, child);
             }
         }
     }
 
     void visit(NodeVisitor<Node<T> > &visitor, Node<T> *node, int depth) {
-		
-		if (depth == 1) visitor.accept(node);
-		else if (!node->isLeaf()) {
-			vector<Node<T>*> &children = node->getChildren(); 
-			for (Node<T> *child : children) {
-                visit(visitor, child, depth-1);
+
+        if (depth == 1) visitor.accept(node);
+        else if (!node->isLeaf()) {
+            vector<Node<T>*> &children = node->getChildren();
+            for (Node<T> *child : children) {
+                visit(visitor, child, depth - 1);
             }
         }
     }
 
     double sumSquaredError(T* parentKey, Node<T> *child) {
-        
-		double distance = 0.0;
-		double dis;
-        
-		if (child->isLeaf()) {
-			vector<T*> &keys = child->getKeys();
-			for (T* key : keys) {
-				dis = _distF(key, parentKey);
-				distance += dis * dis;
-			}
-		}
-		else {
-			int numEntries = child->size();	
-			
-			vector<T*> &keys = child->getKeys();
-			vector<Node<T>*> &children = child->getChildren();
 
-			for (int i=0; i<numEntries; i++) {
-				distance += sumSquaredError(keys[i], children[i]);
-			}
-		}
+        double distance = 0.0;
+        double dis;
+
+        if (child->isLeaf()) {
+            vector<T*> &keys = child->getKeys();
+            for (T* key : keys) {
+                dis = _distF(key, parentKey);
+                distance += dis * dis;
+            }
+        } else {
+            int numEntries = child->size();
+
+            vector<T*> &keys = child->getKeys();
+            vector<Node<T>*> &children = child->getChildren();
+
+            for (int i = 0; i < numEntries; i++) {
+                distance += sumSquaredError(keys[i], children[i]);
+            }
+        }
 
         return distance;
     }
 
-	int objCount(Node<T>* current) {
-		
+    int objCount(Node<T>* current) {
+
         if (current->isLeaf()) {
             return current->size();
         } else {
             int localCount = 0;
-			vector<Node<T>*>& children = current->getChildren();
+            vector<Node<T>*>& children = current->getChildren();
             for (Node<T> *child : children) {
                 localCount += objCount(child);
-				
+
             }
             return localCount;
         }
     }
 
-	
     int clusterCount(Node<T>* current) {
         if (current->isLeaf()) {
             return 1;
         } else {
             int localCount = 0;
-			vector<Node<T>*>& children = current->getChildren();
+            vector<Node<T>*>& children = current->getChildren();
             for (Node<T> *child : children) {
                 localCount += clusterCount(child);
             }
@@ -246,11 +238,11 @@ private:
 
     int emptyClusterCount(Node<T>* current) {
         if (current->isLeaf()) {
-            if (current->size()==0) return 1;
-			else return 0;
+            if (current->size() == 0) return 1;
+            else return 0;
         } else {
             int localCount = 0;
-			vector<Node<T>*>& children = current->getChildren();
+            vector<Node<T>*>& children = current->getChildren();
             for (Node<T> *child : children) {
                 localCount += emptyClusterCount(child);
             }
@@ -262,116 +254,115 @@ private:
         if (current->isLeaf()) {
             return 1;
         } else {
-			return levelCount(current->getChild(0)) + 1;
+            return levelCount(current->getChild(0)) + 1;
         }
     }
-	
-	size_t nearestChild(T *obj, vector<T*> &others) {
 
-		size_t nearest = 0;
-		float dist;
+    size_t nearestChild(T *obj, vector<T*> &others) {
+
+        size_t nearest = 0;
+        float dist;
         float nearestDistance = _distF(obj, others[0]);
-        
+
         for (size_t i = 1; i < others.size(); ++i) {
             dist = _distF(obj, others[i]);
             if (dist < nearestDistance) {
                 nearestDistance = dist;
                 nearest = i;
             }
-        }        
-		
-        return nearest;        
-    } 
+        }
+
+        return nearest;
+    }
 
     int prune(Node<T>* n) {
         if (n->isLeaf()) {
             return 0; // non-empty leaf node
         } else {
             int pruned = 0;
-			vector<Node<T>*> &children = n->getChildren();
+            vector<Node<T>*> &children = n->getChildren();
             for (int i = 0; i < children.size(); i++) {
-				if (children[i]->isEmpty()) {
+                if (children[i]->isEmpty()) {
                     n->remove(i);
                     pruned++;
                 } else {
                     pruned += prune(children[i]);
                 }
             }
-			n->finalizeRemovals();
+            n->finalizeRemovals();
             return pruned;
         }
     }
 
     void rebuildInternal(Node<T> *n, int depth) {
-		
-		if (n->isLeaf()) return;
-		
-		vector<Node<T>*> &children = n->getChildren();
-        
-		if (depth == 1) {
-			vector<T*> &keys = n->getKeys();
+
+        if (n->isLeaf()) return;
+
+        vector<Node<T>*> &children = n->getChildren();
+
+        if (depth == 1) {
+            vector<T*> &keys = n->getKeys();
             for (int i = 0; i < children.size(); ++i) {
                 Node<T>* child = children[i];
                 T* key = keys[i];
-				updatePrototype(child, key);
+                updatePrototype(child, key);
             }
         } else {
             for (int i = 0; i < children.size(); ++i) {
-				rebuildInternal( children[i], depth - 1);
+                rebuildInternal(children[i], depth - 1);
             }
         }
     }
 
-
     void pushDownNoUpdate(Node<T> *n, T *vec) {
 
-		//std::cout << "\n\tPushing down (no update) ...";
-		
-		if (n->isLeaf()) {
-			n->add(vec);  // Finished
+        //std::cout << "\n\tPushing down (no update) ...";
+
+        if (n->isLeaf()) {
+            n->add(vec); // Finished
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
 
-			vector<T*>& keys = n->getKeys();
-			vector<Node<T>*>& children = n->getChildren();
+            vector<T*>& keys = n->getKeys();
+            vector<Node<T>*>& children = n->getChildren();
 
-			size_t nearest = nearestChild(vec, keys);
+            size_t nearest = nearestChild(vec, keys);
             Node<T> *nearestChild = children[nearest];
 
-			pushDownNoUpdate(nearestChild, vec);
+            pushDownNoUpdate(nearestChild, vec);
         }
     }
 
     SplitResult<T> pushDown(Node<T> *n, T *vec) {
 
-		//std::cout << "\n\tPushing down ...";
+        //std::cout << "\n\tPushing down ...";
 
-		SplitResult<T> result;
-		
-		if (n->isLeaf()) {
-			if (n->size() >= _m)  {
+        SplitResult<T> result;
+
+        if (n->isLeaf()) {
+            if (n->size() >= _m) {
                 // split this node and pass new node to parent to insert
-				result = splitLeafNode(n, vec);
+                result = splitLeafNode(n, vec);
             } else {
-				n->add(vec);  // Finished
+                n->add(vec); // Finished
             }
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
 
-			vector<T*>& keys = n->getKeys();
-			vector<Node<T>*>& children = n->getChildren();
+            vector<T*>& keys = n->getKeys();
+            vector<Node<T>*>& children = n->getChildren();
 
-			size_t nearest = nearestChild(vec, keys);
+            size_t nearest = nearestChild(vec, keys);
 
             T *nearestKey = keys[nearest];
             Node<T> *nearestChild = children[nearest];
 
-			result = pushDown(nearestChild, vec);
-			            
+            result = pushDown(nearestChild, vec);
+
             if (result.isSplit) { // if there was a split
-                  					
-				updatePrototype(result._child1, result._key1);
-				updatePrototype(result._child2, result._key2);
+
+                updatePrototype(result._child1, result._key1);
+                updatePrototype(result._child2, result._key2);
 
                 // add new node
                 if (n->size() >= _m) {
@@ -382,9 +373,8 @@ private:
                     n->add(result._key2, result._child2);
                     result.isSplit = false;
                 }
-            }
-            else {
-				updatePrototype(nearestChild, nearestKey);
+            } else {
+                updatePrototype(nearestChild, nearestKey);
             }
         }
 
@@ -392,125 +382,131 @@ private:
     }
 
 
-	// Perform a binary split of the child node
-	SplitResult<T> splitInternalNode(Node<T>* parent, Node<T>* child, T* obj) {
+    // Perform a binary split of the child node
 
-		// cout << "\nSplitting internal node ...";
+    SplitResult<T> splitInternalNode(Node<T>* parent, Node<T>* child, T* obj) {
 
-		SplitResult<T> result;
+        //cout << "\nSplitting internal node ...";
 
-		// Create a 2nd node
-		Node<T>* node2 = new Node<T>();
+        SplitResult<T> result;
 
-		// Copy child nodes into a temp storage vector
-		
-		tempKeys = parent->getKeys();
-		tempKeys.push_back(obj);
-		
-		tempChildren = parent->getChildren();
-		tempChildren.push_back(child);
-				
-		// DetachRemove children from child node		
-		parent->clearKeysAndChildren();
+        // Create a 2nd node
+        Node<T>* node2 = new Node<T>();
 
-		// At this point we have 2 clear nodes: "parent" node (node 1) and "node2"
+        // Copy child nodes into a temp storage vector
 
-		// Cluster keys into 2 groups
-		_clusterer.setNumClusters(2);
-		//_clusterer.cluster(tempKeys);
-		vector<Cluster<T>*>& clusters = _clusterer.cluster(tempKeys);
-				
-		// Get nearest centroids after clustering
-		tempNearCentroids = _clusterer.getNearestCentroids();
+        tempKeys = parent->getKeys();
+        tempKeys.push_back(obj);
 
-		for (int i=0; i<tempNearCentroids.size(); i++) {
-			if (tempNearCentroids[i]==0) parent->add(tempKeys[i], tempChildren[i]);			
-			else node2->add(tempKeys[i], tempChildren[i]);
-		}
+        tempChildren = parent->getChildren();
+        tempChildren.push_back(child);
 
-		// Now make our split result		
-		result.isSplit = true;
-		result._child1 = parent;
-		result._child2 = node2;
-		result._key1 = clusters[0]->getCentroid(); 
-		result._key2 = clusters[1]->getCentroid();
+        // DetachRemove children from child node		
+        parent->clearKeysAndChildren();
 
-		return result;
-	}
+        // At this point we have 2 clear nodes: "parent" node (node 1) and "node2"
 
+        // Cluster keys into 2 groups
+        _clusterer.setNumClusters(2);
+        //_clusterer.cluster(tempKeys);
+        vector<Cluster<T>*>& clusters = _clusterer.cluster(tempKeys);
+        //std::cout << "clusters found = " << clusters.size() << std::flush;
 
-	// Perform a binary split of the child node
-	SplitResult<T> splitLeafNode(Node<T>* child, T* obj) {
-
-		//cout << "\nSplitting leaf node ...";
-
-		SplitResult<T> result;
-
-		// Create a 2nd node
-		Node<T>* node2 = new Node<T>();
-
-		// Copy child nodes into a temp storage vector
-		
-		tempKeys = child->getKeys();
-		tempKeys.push_back(obj);
-
-		// DetachRemove children from child node		
-		child->clearKeysAndChildren();
-
-		// At this point we have 2 clear nodes: "child" node (node 1) and "node2"
-
-		// Cluster keys into 2 groups
-		_clusterer.setNumClusters(2);
-		//_clusterer.cluster(tempKeys);
-		vector<Cluster<T>*>& clusters = _clusterer.cluster(tempKeys);
-				
-		// Get nearest centroids after clustering
-		tempNearCentroids = _clusterer.getNearestCentroids();
-
-		for (int i=0; i<tempNearCentroids.size(); i++) {
-			if (tempNearCentroids[i]==0) child->add(tempKeys[i]);
-			else node2->add(tempKeys[i]);
-		}
-
-		// Now make our split result		
-		result.isSplit = true;
-		result._child1 = child;
-		result._child2 = node2;
-		result._key1 = clusters[0]->getCentroid(); 
-		result._key2 = clusters[1]->getCentroid();
-
-		return result;
-	}
-
-	// Update the protype parentKey
-    void updatePrototype(Node<T> *child, T* parentKey) {
+        // Get nearest centroids after clustering
+        tempNearCentroids = _clusterer.getNearestCentroids();
         
-		//cout << "\nUpdating mean ...";
+
+        for (int i = 0; i < tempNearCentroids.size(); i++) {
+            if (tempNearCentroids[i] == 0) parent->add(tempKeys[i], tempChildren[i]);
+            else node2->add(tempKeys[i], tempChildren[i]);
+        }
+
+        // Now make our split result		
+        result.isSplit = true;
+        result._child1 = parent;
+        result._child2 = node2;
+        result._key1 = clusters[0]->getCentroid();
+        result._key2 = clusters[1]->getCentroid();
+
+        return result;
+    }
+
+
+    // Perform a binary split of the child node
+
+    SplitResult<T> splitLeafNode(Node<T>* child, T* obj) {
+
+        //cout << "\nSplitting leaf node ...";
+
+        SplitResult<T> result;
+
+        // Create a 2nd node
+        Node<T>* node2 = new Node<T>();
+
+        // Copy child nodes into a temp storage vector
+
+        tempKeys = child->getKeys();
+        tempKeys.push_back(obj);
+
+        // DetachRemove children from child node		
+        child->clearKeysAndChildren();
+
+        // At this point we have 2 clear nodes: "child" node (node 1) and "node2"
+
+        // Cluster keys into 2 groups
+        _clusterer.setNumClusters(2);
+        //_clusterer.cluster(tempKeys);
+        vector<Cluster<T>*>& clusters = _clusterer.cluster(tempKeys);
+        //std::cout << "clusters found = " << clusters.size() << std::flush;
+
+        // Get nearest centroids after clustering
+        tempNearCentroids = _clusterer.getNearestCentroids();
+
+        for (int i = 0; i < tempNearCentroids.size(); i++) {
+            if (tempNearCentroids[i] == 0) child->add(tempKeys[i]);
+            else node2->add(tempKeys[i]);
+        }
+
+        // Now make our split result		
+        result.isSplit = true;
+        result._child1 = child;
+        result._child2 = node2;
+        result._key1 = clusters[0]->getCentroid();
+        result._key2 = clusters[1]->getCentroid();
+
+        return result;
+    }
+
+    // Update the protype parentKey
+
+    void updatePrototype(Node<T> *child, T* parentKey) {
+
+        //cout << "\nUpdating mean ...";
 
         //int[] weights = new int[count];
-		weights.clear();
+        weights.clear();
 
-		if (!child->isLeaf()) {
-			vector<Node<T>*>& children = child->getChildren();
+        if (!child->isLeaf()) {
+            vector<Node<T>*>& children = child->getChildren();
 
-			for (size_t i = 0; i < children.size(); i++) {
-				weights.push_back(children[i]->size());
-			}
-		}
+            for (size_t i = 0; i < children.size(); i++) {
+                weights.push_back(children[i]->size());
+            }
+        }
 
-		_protoF(parentKey, child->getKeys(), weights);
+        _protoF(parentKey, child->getKeys(), weights);
     }
 
     void removeData(Node<T> *n, vector<T*> &data) {
-		
-		if (n->isLeaf()) {
-			n->removeData(data);
+
+        if (n->isLeaf()) {
+            n->removeData(data);
         } else {
-			vector<Node<T>*>& children = n->getChildren();
+            vector<Node<T>*>& children = n->getChildren();
 
             for (int i = 0; i < children.size(); i++) {
                 removeData(children[i], data);
-            }            
+            }
         }
     }
 

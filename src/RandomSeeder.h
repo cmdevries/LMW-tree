@@ -31,7 +31,7 @@ public:
 
 		T *vec;
 
-		for (int i=0; i<numCentres; i++) {
+		for (int i=0; i<numCentres && i<data.size(); i++) {
 			vec = new T(*data[indices[i]]);
 			centroids.push_back(vec); 
 		}
