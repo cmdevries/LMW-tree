@@ -18,38 +18,38 @@
 
 #include "EMTree.h"
 #include "KTree.h"
-#include "TSVQ.h"
+//#include "TSVQ.h"
 
-void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
-
-    // Define the types we want to use
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef RandomSeeder<vecType> seederType;
-    //typedef DSquaredSeeder<vecType, distanceType > seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-
-    // EMTree
-    int depth = 5;
-    int iters = 2;
-    vector<int> nodeSizes = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
-    for (int m : nodeSizes) {
-        std::cout << "-------------------" << std::endl;
-        TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, iters);
-        boost::timer::auto_cpu_timer all;
-        tsvq.cluster(vectors);
-        tsvq.printStats();
-        std::cout << std::endl << "TSVQ order = " << m << std::endl;
-    }
-        std::cout << "-------------------" << std::endl;
-    /*
-    for (int i=0; i<data.size(); i++) {
-            kt.add(data[i]);
-
-    }*/
-
-}
+//void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
+//
+//    // Define the types we want to use
+//    typedef SVector<bool> vecType;
+//    typedef hammingDistance distanceType;
+//    typedef meanBitPrototype2 protoType;
+//    typedef RandomSeeder<vecType> seederType;
+//    //typedef DSquaredSeeder<vecType, distanceType > seederType;
+//    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
+//
+//    // EMTree
+//    int depth = 5;
+//    int iters = 2;
+//    vector<int> nodeSizes = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+//    for (int m : nodeSizes) {
+//        std::cout << "-------------------" << std::endl;
+//        TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, iters);
+//        boost::timer::auto_cpu_timer all;
+//        tsvq.cluster(vectors);
+//        tsvq.printStats();
+//        std::cout << std::endl << "TSVQ order = " << m << std::endl;
+//    }
+//        std::cout << "-------------------" << std::endl;
+//    /*
+//    for (int i=0; i<data.size(); i++) {
+//            kt.add(data[i]);
+//
+//    }*/
+//
+//}
 
 void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
 
