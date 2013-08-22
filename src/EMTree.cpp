@@ -87,9 +87,9 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
     typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
 
     // EMTree
-    int depth = 5;
+    int depth = 3;
     int iters = 2;
-    vector<int> nodeSizes = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    vector<int> nodeSizes = {100};//{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
         EMTree<vecType, clustererType, distanceType, protoType> emt(m, depth);
@@ -343,28 +343,63 @@ void reduceDims(const set<int>& topbits, vector<SVector<bool>*>& vectors,
     }
 }
 
-int main(int argc, char** argv) {
-    vector<SVector<bool>*> vectors;
-    int veccount = -1;
-    loadWikiSignatures(vectors, veccount);
-    vector<SVector<bool>*> subset;
-
+void testHistogram(vector<SVector<bool>*>& vectors) {
     if (!vectors.empty()) {
+        vector<SVector<bool>*> subset;
         int dims = vectors[0]->size();
-        set<int> topbits = dimensionHistogram(vectors, dims);
+        set<int> topbits;
+        {
+            boost::timer::auto_cpu_timer seed("calculating histogram: %w seconds\n");
+            topbits = dimensionHistogram(vectors, dims);
+        }       
         loadSubset(vectors, subset, "/Users/chris/LMW-tree/data/inex_xml_mining_subset_2010.txt");
         cout << "filtered " << subset.size() << " vectors to create a subet" << endl;
         vector<SVector<bool>*> reducedSubset;
         cout << "reducing dimensionality to " << topbits.size() << endl;
         reduceDims(topbits, subset, reducedSubset);
-        //sigKTreeCluster(vectors);
-        //sigTSVQCluster(subset);
-        //sigEMTreeCluster(vectors);
         sigKmeansCluster(subset, "/Users/chris/LMW-tree/data/fulldim_clusters.txt");
         sigKmeansCluster(reducedSubset, "/Users/chris/LMW-tree/data/reduceddim_clusters.txt");
-        //testReadVectors();
-        //TestSigEMTree();
     }
-    return 0;
+}
+
+void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
+    if (!vectors.empty()) {
+        const int dims = vectors[0]->size();
+        SVector<bool> mean(dims);
+        vector<int> weights;
+        {
+            boost::timer::auto_cpu_timer time("calculating mean: %w seconds\n");
+            meanBitPrototype2 proto;
+            proto(&mean, vectors, weights);
+        }
+        {
+            boost::timer::auto_cpu_timer hammingTime("hamming distance: %w seconds\n");
+            hammingDistance distance;
+            uint64_t sum = 0;
+            for (auto vector : vectors) {
+                sum += distance(&mean, vector);
+            }
+            cout << sum << endl;
+        }        
+    }
+}
+
+int main(int argc, char** argv) {
+    vector < SVector<bool>*> vectors;
+    //int veccount = -1;
+    int veccount = 100000;
+    {
+        boost::timer::auto_cpu_timer seed("loading signatures: %w seconds\n");
+        loadWikiSignatures(vectors, veccount);
+    }
+
+    //sigKTreeCluster(vectors);
+    //sigTSVQCluster(vectors);
+    sigEMTreeCluster(vectors);
+    //testHistogram(vectors);
+    //testMeanVersusNNSpeed(vectors);
+    //testReadVectors();
+    //TestSigEMTree();
+    return EXIT_SUCCESS;
 }
 
