@@ -104,6 +104,7 @@ protected:
 
 	int _numBlocks;
 	size_t _length;
+        string _id;
 
 public:
     
@@ -146,6 +147,14 @@ public:
 	~SVector() {
 		delete[] _data;
 	}
+        
+        void setID(const string& id) {
+            _id = id;
+        }
+
+        const string& getID() {
+            return _id;
+        }
 
 	size_t size() {
 		return _length;

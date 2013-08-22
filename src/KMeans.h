@@ -107,9 +107,20 @@ public:
 
         return _finalClusters;
     }
+    
+    float getRMSE(vector<T*> &data) {
+        float rmse = 0;
+        float e = 0;
 
-
-    // Private methods here:
+        size_t dataCount = data.size();
+        for (size_t i = 0; i < dataCount; ++i) {
+            // Need to change this in future to use an error function
+            e = _distF(data[i], _centroids[_nearestCentroid[i]]);
+            rmse += e*e;
+        }
+        rmse /= dataCount;
+        return (float) sqrt(rmse);
+    }
 
 private:
 
@@ -299,21 +310,6 @@ private:
         }
         //std::cout << "\nRMSE: " << getRMSE(data);
     }
-
-    float getRMSE(vector<T*> &data) {
-        float rmse = 0;
-        float e = 0;
-
-        size_t dataCount = data.size();
-        for (size_t i = 0; i < dataCount; ++i) {
-            // Need to change this in future to use an error function
-            e = _distF(data[i], _centroids[_nearestCentroid[i]]);
-            rmse += e*e;
-        }
-        rmse /= dataCount;
-        return (float) sqrt(rmse);
-    }
-
 };
 
 

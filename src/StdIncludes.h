@@ -24,6 +24,8 @@ using std::vector;
 using std::list;
 using std::string;
 using std::cout;
+using std::endl;
+using std::flush;
 using std::shared_ptr;
 
 using boost::dynamic_bitset;
