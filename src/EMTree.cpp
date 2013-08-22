@@ -365,19 +365,19 @@ void testHistogram(vector<SVector<bool>*>& vectors) {
 void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
     if (!vectors.empty()) {
         const int dims = vectors[0]->size();
-        SVector<bool> mean(dims);
+        SVector<bool>* mean = new SVector<bool>(dims);
         vector<int> weights;
         {
             boost::timer::auto_cpu_timer time("calculating mean: %w seconds\n");
             meanBitPrototype2 proto;
-            proto(&mean, vectors, weights);
+            proto(mean, vectors, weights);
         }
         {
             boost::timer::auto_cpu_timer hammingTime("hamming distance: %w seconds\n");
             hammingDistance distance;
             uint64_t sum = 0;
             for (auto vector : vectors) {
-                sum += distance(&mean, vector);
+                sum += distance(mean, vector);
             }
             cout << sum << endl;
         }        
@@ -386,8 +386,7 @@ void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
 
 int main(int argc, char** argv) {
     vector < SVector<bool>*> vectors;
-    //int veccount = -1;
-    int veccount = 100000;
+    int veccount = -1;
     {
         boost::timer::auto_cpu_timer seed("loading signatures: %w seconds\n");
         loadWikiSignatures(vectors, veccount);
@@ -395,9 +394,9 @@ int main(int argc, char** argv) {
 
     //sigKTreeCluster(vectors);
     //sigTSVQCluster(vectors);
-    sigEMTreeCluster(vectors);
+    //sigEMTreeCluster(vectors);
     //testHistogram(vectors);
-    //testMeanVersusNNSpeed(vectors);
+    testMeanVersusNNSpeed(vectors);
     //testReadVectors();
     //TestSigEMTree();
     return EXIT_SUCCESS;
