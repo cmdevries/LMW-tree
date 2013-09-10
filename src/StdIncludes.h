@@ -10,6 +10,7 @@
 #include <cmath>
 #include <limits>
 #include <numeric>
+#include <deque>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -20,6 +21,7 @@
 
 #include "Utils.h"
 
+using std::deque;
 using std::vector;
 using std::list;
 using std::string;

@@ -57,17 +57,21 @@ private:
 
 public:
 
-    KTree(int order) {
+    KTree(int order, int clustererMaxiters) {
         _m = order;
         _root = new Node<T>(); // initial root is a leaf
         _clusterer.setNumClusters(2);
-        _clusterer.setMaxIters(10);
+        _clusterer.setMaxIters(clustererMaxiters);
         _clusterer.setEnforceNumClusters(true);
         _added = 0;
     }
 
     int getClusterCount() {
         return clusterCount(_root);
+    }
+    
+    int getClusterCount(int depth) {
+        return clusterCount(_root, depth);
     }
 
     int getEmptyClusterCount() {
@@ -83,11 +87,19 @@ public:
     }
 
     void printStats() {
-        std::cout << "\nNumber of objects: " << getObjCount();
-        std::cout << "\nCluster count: " << getClusterCount();
-        std::cout << "\nEmpty Cluster count: " << getEmptyClusterCount();
-        std::cout << "\nLevel count: " << getLevelCount();
-        std::cout << "\nRMSE: " << getRMSE();
+        cout << "Number of objects: " << getObjCount() << endl;
+        int levelCount = getLevelCount();
+        cout << "Level count: " << getLevelCount() << endl;
+        for (int level = 1; level < levelCount; ++level) {
+                cout << "Cluster count level " << level << ": "
+                        << getClusterCount(level) << endl;
+        }
+        int empty = getEmptyClusterCount();
+        // Cluster counts no longer include empty clusters
+        //cout << "Empty Cluster count: " << empty << endl;
+        //cout << "Non-empty Cluster count: " << count - empty << endl;
+        
+        cout << "RMSE: " << getRMSE() << endl;
     }
 
     void EMStep() {
@@ -123,11 +135,6 @@ public:
     }
 
     void add(T *obj) {
-        //std::cout << "\nAdding object ... ";
-        _added++;
-
-        if (_added % 1000 == 0) cout << "\n\nAdded ... " << _added;
-
         SplitResult<T> result = pushDown(_root, obj);
         if (result.isSplit) {
             _root = new Node<T>();
@@ -225,7 +232,11 @@ private:
 
     int clusterCount(Node<T>* current) {
         if (current->isLeaf()) {
-            return 1;
+            if (current->isEmpty()) {
+                return 0;
+            } else {
+                return 1;
+            }
         } else {
             int localCount = 0;
             vector<Node<T>*>& children = current->getChildren();
@@ -235,6 +246,26 @@ private:
             return localCount;
         }
     }
+    
+    int clusterCount(Node<T>* current, int depth) {
+        if (depth == 1) {
+            int localCount = 0;
+            for (Node<T>* child : current->getChildren()) {
+                if (!child->isEmpty()) {
+                    ++localCount;
+                }
+            }
+            return localCount;
+        } else {
+            int localCount = 0;
+            vector<Node<T>*>& children = current->getChildren();
+            for (Node<T> *child : children) {
+                localCount += clusterCount(child);
+            }
+            return localCount;
+        }
+    }
+    
 
     int emptyClusterCount(Node<T>* current) {
         if (current->isLeaf()) {

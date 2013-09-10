@@ -3,75 +3,70 @@
 
 #include "Node.h"
 
-
 template <typename T>
 class NodeVisitor {
-
 public:
 
-	virtual void accept(T *node) = 0;
+    virtual void accept(T *node) = 0;
 
-	virtual ~NodeVisitor<T>() {  }
+    virtual ~NodeVisitor<T>() {
+    }
 
 };
 
-
 template <typename T>
 class ClusterCounter : public NodeVisitor<T> {
-
-	int _count;
+    int _count;
 
 public:
 
-	ClusterCounter<T>() {
-		_count = 0;
-	}
+    ClusterCounter<T>() {
+        _count = 0;
+    }
 
-	~ClusterCounter<T>() {
+    ~ClusterCounter<T>() {
 
-	}
+    }
 
-	void accept(T *node) {
-		if (node->isLeaf()) _count++;
-	}
+    void accept(T *node) {
+        if (node->isLeaf()) _count++;
+    }
 
-	int getCount() {
-		return _count;
-	}
+    int getCount() {
+        return _count;
+    }
 };
 
 template <typename T>
 class ClusterHistogramCounter : public NodeVisitor<T> {
-
-	int _count;
-	int _size;
-	vector<int> _buckets;
+    int _count;
+    int _size;
+    vector<int> _buckets;
 
 public:
 
-	ClusterHistogramCounter<T>(int maxClusterSize) {
-		_count = 0;
-		_buckets.resize(maxClusterSize+1);
-		for (int i =0; i<_buckets.size(); i++) _buckets[i] = 0;
-	}
+    ClusterHistogramCounter<T>(int maxClusterSize) {
+        _count = 0;
+        _buckets.resize(maxClusterSize + 1);
+        for (int i = 0; i < _buckets.size(); i++) _buckets[i] = 0;
+    }
 
-	~ClusterHistogramCounter<T>() {
+    ~ClusterHistogramCounter<T>() {
 
-	}
+    }
 
-	void accept(T *node) {
-		if (node->isLeaf()) {
-			 _size = node->size();
-			_buckets[_size]++;
-		}
-	}
+    void accept(T *node) {
+        if (node->isLeaf()) {
+            _size = node->size();
+            _buckets[_size]++;
+        }
+    }
 
-	void report() {
-		std::cout << std::endl;
-		for (int i=0; i<_buckets.size(); i++) {
-			std::cout << _buckets[i] << std::endl;
-		}
-	}
+    void report() {
+        for (int i = 0; i < _buckets.size(); i++) {
+            std::cout << _buckets[i] << std::endl;
+        }
+    }
 };
 
 

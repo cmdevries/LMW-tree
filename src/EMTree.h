@@ -16,9 +16,6 @@ private:
     // The order of this tree
     int _m;
 
-    // The order of this tree
-    int _depth;
-
     // The root of the tree.
     Node<T> *_root;
 
@@ -38,12 +35,11 @@ private:
 
 public:
 
-    EMTree(int order, int depth) {
+    EMTree(int order) {
         _m = order;
-        _depth = depth;
         _root = new Node<T>(); // initial root is a leaf
         _clusterer.setNumClusters(_m);
-        _clusterer.setMaxIters(-1);
+        _clusterer.setMaxIters(1);
         //_tp = pool::::create_pool(4); 
         //pool::size_policy_type::
         //_tPool.
@@ -79,10 +75,34 @@ public:
         std::cout << "\nRMSE: " << getRMSE();
     }
 
-    void seed(vector<T*> &data) {
+    void seed(vector<T*> &data, int depth) {
         // make the root a leaf containing all data
         _root->addAll(data);
-        seed(_root, _depth);
+        seed(_root, depth);
+    }
+
+    void seedSingleThreaded(vector<T*> &data, deque<int> splits) {
+        _root->addAll(data);
+        seedSingleThreaded(_root, splits);        
+    }
+    
+    void seedSingleThreaded(Node<T>* current, deque<int> splits) {
+        if (splits.empty()) {
+            return;
+        } else {
+            _clusterer.setNumClusters(splits[0]);
+            vector<Cluster<T>*> clusters = _clusterer.cluster(current->getKeys());
+            current->clearKeysAndChildren();
+            for (Cluster<T>* c : clusters) {
+                Node<T>* child = new Node<T>();
+                child->addAll(c->getNearestList());
+                current->add(c->getCentroid(), child);
+            }
+            splits.pop_front();
+            for (Node<T>* n : current->getChildren()) {
+                seedSingleThreaded(n, splits);
+            }
+        }   
     }
 
     void seed(Node<T>* current, int depth) {
@@ -158,19 +178,19 @@ public:
     void EMStep() {
 
         {
-            boost::timer::auto_cpu_timer t("insert %w secs\n");
+            //boost::timer::auto_cpu_timer t("insert %w secs\n");
             rearrange();
         }
         {
-            boost::timer::auto_cpu_timer t("prune %w secs\n");
+            //boost::timer::auto_cpu_timer t("prune %w secs\n");
             int pruned = 1;
             while (pruned > 0) {
                 pruned = prune();
-                std::cout << "pruned " << pruned << " nodes" << std::endl;
+                //std::cout << "pruned " << pruned << " nodes" << std::endl;
             }
         }
         {
-            boost::timer::auto_cpu_timer t("update %w secs\n");
+            //boost::timer::auto_cpu_timer t("update %w secs\n");
             rebuildInternal();
         }
     }
@@ -192,6 +212,8 @@ public:
 
     void rebuildInternal() {
         // rebuild starting with above leaf level (bottom up)
+        // we are rebuilding means in internal nodes only, this is why we start 
+        // with the above leaf level
         for (int depth = getLevelCount() - 1; depth >= 1; --depth) {
             rebuildInternal(_root, depth);
         }
@@ -266,7 +288,11 @@ private:
 
     int clusterCount(Node<T>* current) {
         if (current->isLeaf()) {
-            return 1;
+            if (current->isEmpty()) {
+                return 0;
+            } else {
+                return 1;
+            }
         } else {
             int localCount = 0;
             vector<Node<T>*>& children = current->getChildren();
@@ -354,11 +380,10 @@ private:
     }
 
     void rebuildInternal(Node<T> *n, int depth) {
-
-        if (n->isLeaf()) return;
-
+        if (n->isLeaf()) {
+            return;
+        }
         vector<Node<T>*> &children = n->getChildren();
-
         if (depth == 1) {
             vector<T*> &keys = n->getKeys();
             for (int i = 0; i < children.size(); ++i) {

@@ -129,7 +129,7 @@ private:
         bool emptyCluster = assignClusters(data);
         if (emptyCluster && _enforceNumClusters) {
             // randomly shuffle if k cluster were not created to enforce the number of clusters if required
-            std::cout << std::endl << "k-means is splitting randomly";
+            //std::cout << std::endl << "k-means is splitting randomly";
             vector<T*> shuffled(data);
             std::random_shuffle(shuffled.begin(), shuffled.end());
             {
@@ -175,9 +175,9 @@ private:
         _nearestCentroid.resize(dataCount);
         //_vectorsPerCentroid.resize(_numClusters);
 
-        float lastRMSE = std::numeric_limits<float>::max();
-        float currentRMSE;
-        float DIFF_RMSE = (float) 1e-3;
+        double lastRMSE = std::numeric_limits<double>::max();
+        double currentRMSE;
+        double DIFF_RMSE = 1e-4;
 
         // Setup initial state.
         _seeder->seed(data, _centroids, _numClusters);
@@ -192,7 +192,7 @@ private:
         // First iteration
         vectorsToNearestCentroid(data);
         recalculateCentroids(data);
-        if (_maxIters == -1) {
+        if (_maxIters <= 1) {
             return;
         }
 
@@ -202,27 +202,27 @@ private:
         bool converged = false;
         _iterCount = 1;
         currentRMSE = getRMSE(data);
-        //std::cout << "\nRMSE: " << currentRMSE;
+        //cout << "iteration = " << _iterCount << " RMSE = " << currentRMSE << endl;
 
         while (!converged) {
+            
             lastRMSE = currentRMSE;
 
             //converged = vectorsToNearestCentroid(data);
             vectorsToNearestCentroid(data);
             recalculateCentroids(data);
+            _iterCount++;
 
             currentRMSE = getRMSE(data);
-            if (abs(lastRMSE - currentRMSE) < DIFF_RMSE) converged = true;
+            //cout << "iteration = " << _iterCount << " RMSE = " << currentRMSE << endl;
 
-            _iterCount++;
+            if (fabs(lastRMSE - currentRMSE) < DIFF_RMSE) converged = true;
+
 
             if (_iterCount >= _maxIters) break;
 
-            //std::cout << "\n-------\nRMSE: " << currentRMSE;
-            //std::cout << "\n-------";
         }
-
-        //std::cout << "\n";
+        //cout << "iterations = " << _iterCount << endl;
     }
 
     size_t nearestObj(T *obj, vector<T*> &others) {

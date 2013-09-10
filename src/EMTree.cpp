@@ -89,15 +89,15 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
     // EMTree
     int depth = 3;
     int iters = 2;
-    vector<int> nodeSizes = {100};//{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    vector<int> nodeSizes = {100}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
-        EMTree<vecType, clustererType, distanceType, protoType> emt(m, depth);
+        EMTree<vecType, clustererType, distanceType, protoType> emt(m);
 
         boost::timer::auto_cpu_timer all;
         {
             boost::timer::auto_cpu_timer seed("\nseeding tree: %w seconds\n");
-            emt.seed(vectors);
+            emt.seed(vectors, depth);
             emt.printStats();
         }
         for (int i = 0; i < iters; ++i) {
@@ -113,7 +113,7 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
         emt.printStats();
         std::cout << std::endl << "EM-tree order = " << m << std::endl;
     }
-        std::cout << "-------------------" << std::endl;
+    std::cout << "-------------------" << std::endl;
     /*
     for (int i=0; i<data.size(); i++) {
             kt.add(data[i]);
@@ -136,8 +136,9 @@ void sigKTreeCluster(vector<SVector<bool>*> &vectors) {
     ClusterCounter<nodeType> counter;
 
     // KTree algorithm
-    int order = 80;
-    KTree<vecType, clustererType, distanceType, protoType> kt(order);
+    int order = 100;
+    int maxiters = 2;
+    KTree<vecType, clustererType, distanceType, protoType> kt(order, maxiters);
 
     boost::timer::auto_cpu_timer t;
 
@@ -201,7 +202,7 @@ void readSignatures(vector<SVector<bool>*> &vectors, string docidFile, string si
         size_t sigSize, size_t maxVectors) {
     using namespace std;
     cout << docidFile << endl << signatureFile << endl;
-    
+
     // setup streams
     const size_t numBytes = sigSize / 8;
     char *data = new char[numBytes];
@@ -212,7 +213,7 @@ void readSignatures(vector<SVector<bool>*> &vectors, string docidFile, string si
         cout << "unable to open file" << endl;
         return;
     }
-    
+
     // read data
     while (getline(docidStream, docid)) {
         sigStream.read(data, numBytes);
@@ -234,8 +235,8 @@ void readSignatures(vector<SVector<bool>*> &vectors, string docidFile, string si
 }
 
 void loadWikiSignatures(vector<SVector<bool>*>& vectors, int veccount) {
-    string docidFile = "/Users/chris/LMW-tree/data/wiki.4096.docids";
-    string signatureFile = "/Users/chris/LMW-tree/data/wiki.4096.sig";
+    string docidFile = "data/wiki.4096.docids";
+    string signatureFile = "data/wiki.4096.sig";
     int dims = 4096;
     readSignatures(vectors, docidFile, signatureFile, dims, veccount);
 }
@@ -254,6 +255,7 @@ void loadSubset(vector<SVector<bool>*>& vectors, vector<SVector<bool>*>& subset,
             subset.push_back(vector);
         }
     }
+    cout << "filtered " << subset.size() << " vectors to create the INEX 2010 XML Mining subset" << endl;
 }
 
 void genData(vector<SVector<bool>*> &vectors, size_t sigSize, size_t numVectors) {
@@ -276,11 +278,12 @@ void genData(vector<SVector<bool>*> &vectors, size_t sigSize, size_t numVectors)
 }
 
 void testReadVectors() {
-    vector<SVector<bool>*> vectors;
+    vector < SVector<bool>*> vectors;
     loadWikiSignatures(vectors, 100 * 1000);
 }
 
 // returns top half of dimensions
+
 set<int> dimensionHistogram(vector<SVector<bool>*>& vectors, int dims) {
     cout << "calculating dimension histogram" << endl;
     vector<int> histogram(dims, 0);
@@ -301,11 +304,13 @@ set<int> dimensionHistogram(vector<SVector<bool>*>& vectors, int dims) {
         }
     }
     cout << endl;
+
     struct Dimension {
         size_t index;
         int weight;
+
         bool operator<(const Dimension& rhs) const {
-            return weight > rhs.weight;
+            return weight < rhs.weight;
         }
     };
     vector<Dimension> sorted;
@@ -345,20 +350,19 @@ void reduceDims(const set<int>& topbits, vector<SVector<bool>*>& vectors,
 
 void testHistogram(vector<SVector<bool>*>& vectors) {
     if (!vectors.empty()) {
-        vector<SVector<bool>*> subset;
+        vector < SVector<bool>*> subset;
         int dims = vectors[0]->size();
         set<int> topbits;
         {
             boost::timer::auto_cpu_timer seed("calculating histogram: %w seconds\n");
             topbits = dimensionHistogram(vectors, dims);
-        }       
-        loadSubset(vectors, subset, "/Users/chris/LMW-tree/data/inex_xml_mining_subset_2010.txt");
-        cout << "filtered " << subset.size() << " vectors to create a subet" << endl;
-        vector<SVector<bool>*> reducedSubset;
+        }
+        loadSubset(vectors, subset, "data/inex_xml_mining_subset_2010.txt");
+        vector < SVector<bool>*> reducedSubset;
         cout << "reducing dimensionality to " << topbits.size() << endl;
         reduceDims(topbits, subset, reducedSubset);
-        sigKmeansCluster(subset, "/Users/chris/LMW-tree/data/fulldim_clusters.txt");
-        sigKmeansCluster(reducedSubset, "/Users/chris/LMW-tree/data/reduceddim_clusters.txt");
+        sigKmeansCluster(subset, "data/fulldim_clusters.txt");
+        sigKmeansCluster(reducedSubset, "data/reduceddim_clusters.txt");
     }
 }
 
@@ -372,33 +376,254 @@ void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
             meanBitPrototype2 proto;
             proto(mean, vectors, weights);
         }
+        uint64_t sum = 0;
         {
             boost::timer::auto_cpu_timer hammingTime("hamming distance: %w seconds\n");
             hammingDistance distance;
-            uint64_t sum = 0;
             for (auto vector : vectors) {
                 sum += distance(mean, vector);
             }
-            cout << sum << endl;
-        }        
+        }
+        cout << "global mean error = " << ((double) sum / vectors.size()) << endl;
+    }
+}
+
+void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
+    //determine cost of operations
+    if (true) {
+        testMeanVersusNNSpeed(vectors);
+    }
+
+    // types for data
+    typedef SVector<bool> vecType;
+    typedef hammingDistance distanceType;
+    typedef meanBitPrototype2 protoType;
+    typedef Node<vecType> nodeType;
+    typedef RandomSeeder<vecType> seederType;
+    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
+    
+    // run TSVQ vs EM-tree convergence
+    if (false) {
+        int depth = 3, m = 10;
+        int iterRange = 40; // test RMSE at 1 to maxiters iterations
+
+        //TSVQ
+        if (true) {
+            vector<double> rmse;
+            vector<int> clusters;
+            vector<double> seconds;
+            for (int maxiters = 1; maxiters <= iterRange; ++maxiters) {
+                boost::timer::auto_cpu_timer all;
+                TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
+                tsvq.cluster(vectors);
+                all.stop();
+                cout << "." << flush;
+                clusters.push_back(tsvq.getClusterCount());
+                rmse.push_back(tsvq.getRMSE());
+                seconds.push_back(all.elapsed().wall / 1e9);
+            }
+            cout << endl;
+            for (int i = 0; i < clusters.size(); ++i) {
+                cout << clusters[i] << "," << rmse[i] << "," << seconds[i] << endl;
+            }
+        }
+
+        //EM-tree
+        if (true) {
+            vector<double> rmse;
+            vector<int> clusters;
+            vector<double> seconds;
+            for (int maxiters = 1; maxiters <= iterRange; ++maxiters) {
+                deque<int> splits;
+                for (int i = 0; i < depth - 1; ++i) {
+                    splits.push_back(m);
+                }
+                boost::timer::auto_cpu_timer all;
+                EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                // seeding does first iteration
+                emt.seedSingleThreaded(vectors, splits);
+                for (int i = 1; i < maxiters; ++i) {
+                    emt.EMStep();
+                }
+                all.stop();
+                cout << "." << flush;
+                rmse.push_back(emt.getRMSE());
+                clusters.push_back(emt.getClusterCount());
+                seconds.push_back(all.elapsed().wall / 1e9);
+            }
+            cout << endl;
+            for (int i = 0; i < clusters.size(); ++i) {
+                cout << clusters[i] << "," << rmse[i] << "," << seconds[i] << endl;
+            }
+        }
+    }
+    
+
+    // run TSVQ vs EM-tree streaming experiments
+    if (false) {
+        int depth = 4;
+        vector<int> orders = {4,5,6,7,8,9,10};
+        //vector<int> orders = {5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100};
+        //vector<int> orders = {10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60}; //, 65, 70, 75, 80, 85, 90, 95, 100};
+
+        //TSVQ
+        if (true) {
+            int maxiters = 2;
+            vector<double> rmse;
+            vector<int> clusters;
+            vector<double> seconds;
+            for (int m : orders) {
+                boost::timer::auto_cpu_timer all;
+                TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
+                tsvq.cluster(vectors);
+                all.stop();
+                cout << "." << flush;
+                clusters.push_back(tsvq.getClusterCount());
+                rmse.push_back(tsvq.getRMSE());
+                seconds.push_back(all.elapsed().wall / 1e9);
+            }
+            cout << endl;
+            for (int i = 0; i < clusters.size(); ++i) {
+                cout << clusters[i] << "," << rmse[i] << "," << seconds[i] << endl;
+            }
+        }
+
+        //EM-tree
+        if (true) {
+            int maxiters = 6;
+            vector<double> rmse;
+            vector<int> clusters;
+            vector<double> seconds;
+            for (int m : orders) {
+                deque<int> splits;
+                for (int i = 0; i < depth - 1; ++i) {
+                    splits.push_back(m);
+                }
+                boost::timer::auto_cpu_timer all;
+                EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                // seeding does first iteration
+                emt.seedSingleThreaded(vectors, splits);
+                //double currentRMSE = emt.getRMSE();
+                for (int i = 1; i < maxiters; ++i) {
+                    //double lastRMSE = currentRMSE;
+                    emt.EMStep();
+                    //currentRMSE = emt.getRMSE();
+                    //double delta = fabs(currentRMSE - lastRMSE);
+                    //cout << i << "=" << delta << " " << flush;
+                    //cout << "." << endl;
+                    //if (delta < 1e-4) {
+                    //    break;
+                    //}
+                }
+                all.stop();
+                cout << "." << flush;
+                rmse.push_back(emt.getRMSE());
+                clusters.push_back(emt.getClusterCount());
+                double elapsed = all.elapsed().wall / 1e9;
+                seconds.push_back(elapsed);
+                //cout << " time=" << elapsed << " ..." << endl;
+            }
+            cout << endl;
+            for (int i = 0; i < clusters.size(); ++i) {
+                cout << clusters[i] << "," << rmse[i] << "," << seconds[i] << endl;
+            }
+        }
+    }
+
+    // run kmeans exerpiments
+    if (true) {
+        int maxiters = 1000;
+        cout << "k-means maxiters=" << maxiters << endl;
+        vector<double> rmse;
+        vector<int> targetClusters = {24};//100, 225, 400, 625, 900};
+        vector<int> clusters;
+        vector<double> seconds;
+        for (int k : targetClusters) {
+            boost::timer::auto_cpu_timer all;
+            clustererType kmeans;
+            kmeans.setNumClusters(k);
+            kmeans.setMaxIters(maxiters);
+            int finalClusters = kmeans.cluster(vectors).size();
+            all.stop();
+            cout << "." << flush;
+            clusters.push_back(finalClusters);
+            rmse.push_back(kmeans.getRMSE(vectors));
+            seconds.push_back(all.elapsed().wall / 1e9);
+        }
+        cout << endl;
+        for (int i = 0; i < clusters.size(); ++i) {
+            cout << clusters[i] << "," << rmse[i] << "," << seconds[i] << endl;
+        }
+    }
+
+    // run K-tree experiments
+    if (false) {
+        // build tree
+        vector<int> orders = {10000, 5000, 2500, 1000, 750, 500, 400, 300, 250, 200, 150, 100, 75, 50, 25};
+        for (int m : orders) {
+            const int maxiters = 1000;
+            cout << "-----" << endl;
+            cout << "Building K-tree of order m=" << m
+                    << ", k-means maxiters=" << maxiters << endl;
+            boost::timer::auto_cpu_timer all;
+            KTree<vecType, clustererType, distanceType, protoType> kt(m, maxiters);
+            {
+                boost::timer::auto_cpu_timer insert("inserting vectors: %w seconds\n");
+                for (size_t i = 0; i < vectors.size(); i++) {
+                    kt.add(vectors[i]);
+                    size_t next = i + 1;
+                    if (next % 10000 == 0) {
+                        cout << next << flush;
+                    }
+                    if (next % 1000 == 0) {
+                        cout << "." << flush;
+                    }
+                }
+            }
+            cout << endl;
+            kt.printStats();
+
+            // rearrange tree by reinserting all vectors
+            {
+                boost::timer::auto_cpu_timer insert("rearranging vectors: %w seconds\n");
+                kt.rearrange();
+            }
+            kt.printStats();
+        }
     }
 }
 
 int main(int argc, char** argv) {
+    std::srand(std::time(0));
+
+    // load data
     vector < SVector<bool>*> vectors;
     int veccount = -1;
     {
-        boost::timer::auto_cpu_timer seed("loading signatures: %w seconds\n");
+        boost::timer::auto_cpu_timer load("loading signatures: %w seconds\n");
         loadWikiSignatures(vectors, veccount);
     }
 
-    //sigKTreeCluster(vectors);
-    //sigTSVQCluster(vectors);
-    //sigEMTreeCluster(vectors);
-    //testHistogram(vectors);
-    testMeanVersusNNSpeed(vectors);
-    //testReadVectors();
-    //TestSigEMTree();
+    // filter data to XML Mining subset
+    vector < SVector<bool>*> subset;
+    {
+        boost::timer::auto_cpu_timer load("filtering subset: %w seconds\n");
+        loadSubset(vectors, subset, "data/inex_xml_mining_subset_2010.txt");
+    }
+
+    // run experiments
+    if (!vectors.empty() && !subset.empty()) {
+        journalPaperExperiments(subset);
+        //sigKTreeCluster(vectors);
+        //sigTSVQCluster(vectors);
+        //sigEMTreeCluster(vectors);
+        //testHistogram(vectors);
+        //testMeanVersusNNSpeed(vectors);
+        //testReadVectors();
+        //TestSigEMTree();
+    } else {
+        cout << "error - vectors or subset empty" << endl;
+    }
     return EXIT_SUCCESS;
 }
 

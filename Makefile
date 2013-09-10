@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -std=c++0x -O4 -march=native -mtune=native
+CFLAGS = -std=c++0x -O2 -march=native -mtune=native
 #CFLAGS = -std=c++0x -O0 -ggdb 
 LDFLAGS = -L/opt/local/lib -lpthread -lboost_system-mt -lboost_thread-mt -lboost_timer-mt #-lrt
 

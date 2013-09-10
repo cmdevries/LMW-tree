@@ -140,7 +140,11 @@ private:
 
     int clusterCount(Node<T>* current) {
         if (current->isLeaf()) {
-            return 1;
+            if (current->isEmpty()) {
+                return 0;
+            } else {
+                return 1;
+            }
         } else {
             int localCount = 0;
             vector<Node<T>*>& children = current->getChildren();
