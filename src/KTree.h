@@ -260,7 +260,7 @@ private:
             int localCount = 0;
             vector<Node<T>*>& children = current->getChildren();
             for (Node<T> *child : children) {
-                localCount += clusterCount(child);
+                localCount += clusterCount(child, depth - 1);
             }
             return localCount;
         }
