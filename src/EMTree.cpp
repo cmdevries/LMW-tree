@@ -405,7 +405,8 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
     // run TSVQ vs EM-tree convergence
     if (true) {
         int depth = 3, m = 10;
-        int iterRange = 10; // test RMSE at 1 to maxiters iterations
+        int iterRange = 100; // test RMSE at 1 to maxiters iterations
+        int seed = 1234; // start with same seed each time
 
         //TSVQ
         if (true) {
@@ -413,8 +414,8 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
             vector<int> clusters;
             vector<double> seconds;
             for (int maxiters = 1; maxiters <= iterRange; ++maxiters) {
+                srand(seed);
                 boost::timer::auto_cpu_timer all;
-                srand(1234);
                 TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
                 tsvq.cluster(vectors);
                 all.stop();
@@ -431,6 +432,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
 
         //EM-tree
         if (true) {
+            cout << "EM-tree convergence" << endl;
             vector<double> rmse;
             vector<int> clusters;
             vector<double> seconds;
@@ -439,8 +441,8 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 for (int i = 0; i < depth - 1; ++i) {
                     splits.push_back(m);
                 }
+                srand(seed);
                 boost::timer::auto_cpu_timer all;
-                srand(1234);
                 EMTree<vecType, clustererType, distanceType, protoType> emt(m);
                 // seeding does first iteration
                 emt.seedSingleThreaded(vectors, splits);
@@ -533,7 +535,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
     }
 
     // run kmeans exerpiments
-    if (true) {
+    if (false) {
         int maxiters = 1000;
         cout << "k-means maxiters=" << maxiters << endl;
         vector<double> rmse;
@@ -559,9 +561,9 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
     }
 
     // run K-tree experiments
-    if (false) {
+    if (true) {
         // build tree
-        vector<int> orders = {10000, 5000, 2500, 1000, 750, 500, 400, 300, 250, 200, 150, 100, 75, 50, 25};
+        vector<int> orders = {100};//{10000, 5000, 2500, 1000, 750, 500, 400, 300, 250, 200, 150, 100, 75, 50, 25};
         for (int m : orders) {
             const int maxiters = 1000;
             cout << "-----" << endl;
