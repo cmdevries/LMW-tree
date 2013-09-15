@@ -25,6 +25,7 @@ private:
     ProtoType _protoF;
 
     vector<T*> removed;
+    vector<Node<T>*> removedChildren;
 
     // Weights for prototype function (we don't have to use these)
     vector<int> weights;
@@ -205,6 +206,18 @@ public:
 
         removed.clear();
     }
+
+    void rearrangeInternal() {
+        for (int depth = 2; depth < getMaxLevelCount(); ++depth) {
+            removeDataInternal(_root, removed, removedChildren, depth);
+            for (int i = 0; i < removed.size(); i++) {
+                pushDownNoUpdateInternal(_root, removed[i], removedChildren[i], depth);
+            }
+            prune();
+            removed.clear();
+            removedChildren.clear();
+        }
+    }    
 
     int prune() {
         return prune(_root);
@@ -416,6 +429,26 @@ private:
             pushDownNoUpdate(nearestChild, vec);
         }
     }
+    
+    void pushDownNoUpdateInternal(Node<T> *n, T* key, Node<T>* child, int depth) {
+
+        //std::cout << "\n\tPushing down (no update) ...";
+
+        if (depth == 1) {
+            n->add(key, child); // Finished
+        } else { // It is an internal node.
+            // recurse via nearest neighbour cluster
+
+            vector<T*>& keys = n->getKeys();
+            vector<Node<T>*>& children = n->getChildren();
+
+            size_t nearest = nearestChild(key, keys);
+            Node<T> *nearestChild = children[nearest];
+
+            pushDownNoUpdateInternal(nearestChild, key, child, depth - 1);
+        }
+    }
+    
 
     /*
 SplitResult<T> pushDown(Node<T> *n, T *vec) {
@@ -591,7 +624,16 @@ SplitResult<T> pushDown(Node<T> *n, T *vec) {
             }
         }
     }
-
+    
+    void removeDataInternal(Node<T>* n, vector<T*>& keys, vector<Node<T>*>& children, int depth) {
+        if (depth == 1) {
+            n->removeData(keys, children);
+        } else {
+            for (Node<T>* child : n->getChildren()) {
+                removeDataInternal(child, keys, children, depth - 1);
+            }
+        }
+    }
 };
 
 

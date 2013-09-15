@@ -11,6 +11,7 @@
 #include <limits>
 #include <numeric>
 #include <deque>
+#include <algorithm>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>

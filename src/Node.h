@@ -3,168 +3,175 @@
 
 #include "StdIncludes.h"
 
-
-
 template <typename T>
 class Node {
-
-
 private:
 
-	// In Leaf nodes the keys are the data.
+    // In Leaf nodes the keys are the data.
     vector<T*> _keys;
-    
+
     // Child nodes if this is an internal cluster node.
     vector<Node*> _children;
 
-	bool _isLeaf;
-	bool _ownsData;
+    bool _isLeaf;
+    bool _ownsData;
 
 
 public:
-	
-	Node() {
-		_isLeaf = true;
-		_ownsData = false;
-	}
 
-	~Node() {
-		// Clean up storage
-		removeAll();
-	}
+    Node() {
+        _isLeaf = true;
+        _ownsData = false;
+    }
 
-	bool isEmpty() {
-		return _keys.empty();
-	}
+    ~Node() {
+        // Clean up storage
+        removeAll();
+    }
 
-	bool isLeaf() {
-		return _isLeaf;
-	}
+    bool isEmpty() {
+        return _keys.empty();
+    }
 
-	int size() {
-		return _keys.size();
-	}
+    bool isLeaf() {
+        return _isLeaf;
+    }
 
-	void setOwnsData(bool owns) {
-		_ownsData = owns;
-	}
+    int size() {
+        return _keys.size();
+    }
 
-	bool ownsData() {
-		return _ownsData;
-	}
+    void setOwnsData(bool owns) {
+        _ownsData = owns;
+    }
 
-	T* getKey(int i) {
-		return _keys[i];
-	}
+    bool ownsData() {
+        return _ownsData;
+    }
+
+    T* getKey(int i) {
+        return _keys[i];
+    }
 
     vector<T*>& getKeys() {
         return _keys;
     }
 
     // pre: is not a leaf
+
     Node* getChild(int i) {
         return _children[i];
     }
 
     // pre: is not a leaf
+
     vector<Node*>& getChildren() {
         return _children;
     }
 
-	void clearKeysAndChildren() {
-		_children.clear();
-		_keys.clear();
-	}
+    void clearKeysAndChildren() {
+        _children.clear();
+        _keys.clear();
+    }
 
-	// pre: is leaf
-	void add(T* key) {
-		_keys.push_back(key);
-	}
-		
-	void add(T* key, Node *node) {
-		_keys.push_back(key);
-		_children.push_back(node);
-		_isLeaf = false;
-	}
+    // pre: is leaf
+
+    void add(T* key) {
+        _keys.push_back(key);
+    }
+
+    void add(T* key, Node *node) {
+        _keys.push_back(key);
+        _children.push_back(node);
+        _isLeaf = false;
+    }
 
     void addAll(vector<T*> &keys) {
-        _keys = keys;		
+        _keys = keys;
     }
 
-    void removeData(vector<T*>& data) {        
-		if (isLeaf()) {	
-			for (int i=0; i<_keys.size(); i++) {
-				data.push_back(_keys[i]);
-			}
-			_keys.clear();
+    void removeData(vector<T*>& data) {
+        if (isLeaf()) {
+            for (int i = 0; i < _keys.size(); i++) {
+                data.push_back(_keys[i]);
+            }
+            _keys.clear();
         }
     }
 
-	void removeEmptyChildren() {
+    void removeData(vector<T*>& keys, vector<Node<T>*>& children) {
+        std::copy(_keys.begin(), _keys.end(), std::back_inserter(keys));
+        _keys.clear();
+        std::copy(_children.begin(), _children.end(), std::back_inserter(children));
+        _children.clear();
+        _isLeaf = true;
+    }
+
+    void removeEmptyChildren() {
 
 
-	}
+    }
 
     void remove(int i) {
-        if (_isLeaf) {			
-			if (_ownsData) delete _keys[i];
-            _keys[i]=NULL;
+        if (_isLeaf) {
+            if (_ownsData) delete _keys[i];
+            _keys[i] = NULL;
         } else {
-			// Free the memory for the centroid key
+            // Free the memory for the centroid key
             delete _keys[i];
-			_keys[i] = NULL;
-			// Delete associated child node
+            _keys[i] = NULL;
+            // Delete associated child node
             delete _children[i];
-			_children[i] = NULL;
+            _children[i] = NULL;
         }
     }
 
-	void removeAll() {
-        	
-		if (_ownsData) {
-			//std::cout << "-";
-			for (T* k : _keys) delete k;			
-		}
-		_keys.clear();		
-	
-		if (!_isLeaf) {
-			//std::cout << "-";
-			for (Node* n : _children) delete n;				
-		}
-		_children.clear();
+    void removeAll() {
 
-		_isLeaf = true;
-	}
+        if (_ownsData) {
+            //std::cout << "-";
+            for (T* k : _keys) delete k;
+        }
+        _keys.clear();
 
-	// Use this to finalize individual removals.
-	// No need to use this after calling removeAll()
-	void finalizeRemovals() {
+        if (!_isLeaf) {
+            //std::cout << "-";
+            for (Node* n : _children) delete n;
+        }
+        _children.clear();
 
-		// Remove NULL keys and corresponding NULL children
-		int toRemove = 0;
-		int sz = _keys.size();
-		
-		for (int i=0; i<_keys.size(); i++) {
-			if (_keys[i]==NULL) {
-				toRemove++;
-			}
-			else {
-				// Shuffle keys down 
-				_keys[i-toRemove] = _keys[i];
-			
-				// Shuffle children down
-				if (!_isLeaf) _children[i-toRemove] = _children[i];		
-			}
-		}
+        _isLeaf = true;
+    }
 
-		// Resize vector containers
-		int newSize = sz - toRemove;
+    // Use this to finalize individual removals.
+    // No need to use this after calling removeAll()
 
-		if (toRemove>0) {
-			_keys.resize(newSize);
-			if (!_isLeaf ) _children.resize(newSize);
-		}
-	}
+    void finalizeRemovals() {
+
+        // Remove NULL keys and corresponding NULL children
+        int toRemove = 0;
+        int sz = _keys.size();
+
+        for (int i = 0; i < _keys.size(); i++) {
+            if (_keys[i] == NULL) {
+                toRemove++;
+            } else {
+                // Shuffle keys down 
+                _keys[i - toRemove] = _keys[i];
+
+                // Shuffle children down
+                if (!_isLeaf) _children[i - toRemove] = _children[i];
+            }
+        }
+
+        // Resize vector containers
+        int newSize = sz - toRemove;
+
+        if (toRemove > 0) {
+            _keys.resize(newSize);
+            if (!_isLeaf) _children.resize(newSize);
+        }
+    }
 
 };
 

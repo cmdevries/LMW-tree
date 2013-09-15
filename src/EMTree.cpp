@@ -88,8 +88,8 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
 
     // EMTree
     int depth = 3;
-    int iters = 2;
-    vector<int> nodeSizes = {100}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    int iters = 10;
+    vector<int> nodeSizes = {10}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
         EMTree<vecType, clustererType, distanceType, protoType> emt(m);
@@ -403,9 +403,9 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
     typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
     
     // run TSVQ vs EM-tree convergence
-    if (false) {
+    if (true) {
         int depth = 3, m = 10;
-        int iterRange = 40; // test RMSE at 1 to maxiters iterations
+        int iterRange = 10; // test RMSE at 1 to maxiters iterations
 
         //TSVQ
         if (true) {
@@ -414,6 +414,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
             vector<double> seconds;
             for (int maxiters = 1; maxiters <= iterRange; ++maxiters) {
                 boost::timer::auto_cpu_timer all;
+                srand(1234);
                 TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
                 tsvq.cluster(vectors);
                 all.stop();
@@ -439,6 +440,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                     splits.push_back(m);
                 }
                 boost::timer::auto_cpu_timer all;
+                srand(1234);
                 EMTree<vecType, clustererType, distanceType, protoType> emt(m);
                 // seeding does first iteration
                 emt.seedSingleThreaded(vectors, splits);
@@ -489,7 +491,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
         }
 
         //EM-tree
-        if (true) {
+        if (false) {
             int maxiters = 6;
             vector<double> rmse;
             vector<int> clusters;
@@ -616,7 +618,7 @@ int main(int argc, char** argv) {
         journalPaperExperiments(subset);
         //sigKTreeCluster(vectors);
         //sigTSVQCluster(vectors);
-        //sigEMTreeCluster(vectors);
+        //sigEMTreeCluster(subset);
         //testHistogram(vectors);
         //testMeanVersusNNSpeed(vectors);
         //testReadVectors();
