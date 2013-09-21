@@ -27,6 +27,9 @@ private:
     int _iterCount;
 
     // maximum number of iterations
+    // -1 - run until complete convergence
+    // 0 - only assign nearest neighbors after seeding
+    // >= 1 - perform this many iterations
     int _maxIters;
 
     // How many clusters should be found? i.e. k
@@ -94,31 +97,22 @@ public:
     }
 
     vector<Cluster<T>*>& cluster(vector<T*> &data) {
-
-        //std::cout << "\nClustering... ";
-
         Utils::purge(_clusters);
         _clusters.clear();
         _finalClusters.clear();
-
         cluster(data, _numClusters);
-
         finalizeClusters(data);
-
         return _finalClusters;
     }
     
     float getRMSE(vector<T*> &data) {
         float rmse = 0;
-        float e = 0;
-
-        size_t dataCount = data.size();
-        for (size_t i = 0; i < dataCount; ++i) {
+        for (size_t i = 0; i < data.size(); ++i) {
             // Need to change this in future to use an error function
-            e = _distF(data[i], _centroids[_nearestCentroid[i]]);
+            float e = _distF(data[i], _centroids[_nearestCentroid[i]]);
             rmse += e*e;
         }
-        rmse /= dataCount;
+        rmse /= data.size();
         return (float) sqrt(rmse);
     }
 
@@ -165,21 +159,10 @@ private:
      * @param clusters      the number of clusters to find (i.e. k)
      */
     void cluster(vector<T*> &data, size_t clusters) {
-
-        _iterCount = 0;
-        //_dim = vectors[0]->length;
-        _numClusters = clusters;
-
-        int dataCount = data.size();
-
-        _nearestCentroid.resize(dataCount);
-        //_vectorsPerCentroid.resize(_numClusters);
-
-        double lastRMSE = std::numeric_limits<double>::max();
-        double currentRMSE;
-        double DIFF_RMSE = 1e-4;
-
         // Setup initial state.
+        _iterCount = 0;
+        _numClusters = clusters;
+        _nearestCentroid.resize(data.size());
         _seeder->seed(data, _centroids, _numClusters);
 
         // Create as many cluster objects as there are centroids
@@ -191,35 +174,24 @@ private:
 
         // First iteration
         vectorsToNearestCentroid(data);
-        recalculateCentroids(data);
-        if (_maxIters <= 1) {
+        if (_maxIters == 0) {
             return;
         }
-
-        //if (_maxIters<=1) return;
+        recalculateCentroids(data);
+        if (_maxIters == 1) {
+            return;
+        }
 
         // Repeat until convergence.
         bool converged = false;
         _iterCount = 1;
-        currentRMSE = getRMSE(data);
-        //cout << "iteration = " << _iterCount << " RMSE = " << currentRMSE << endl;
-
         while (!converged) {
-            
-            lastRMSE = currentRMSE;
-
-            //converged = vectorsToNearestCentroid(data);
-            vectorsToNearestCentroid(data);
+            converged = vectorsToNearestCentroid(data);
             recalculateCentroids(data);
             _iterCount++;
-
-            currentRMSE = getRMSE(data);
-            //cout << "iteration = " << _iterCount << " RMSE = " << currentRMSE << endl;
-
-            if (fabs(lastRMSE - currentRMSE) < DIFF_RMSE) converged = true;
-
-
-            if (_iterCount >= _maxIters) break;
+            if (_maxIters != -1 && _iterCount >= _maxIters) {
+                break;
+            }
 
         }
         //cout << "iterations = " << _iterCount << endl;
@@ -252,26 +224,20 @@ private:
      *                 convergence
      */
     bool vectorsToNearestCentroid(vector<T*> &data) {
+        // Clear the nearest vectors in each cluster
+        for (Cluster<T> *c : _clusters) {
+            c->clearNearest();
+        }
         bool converged = true;
-        size_t nearest;
-        size_t dataCount = data.size();
-
-        //std::cout << "\nVectors to nearest centroid ...";
-        //std::cout << "\n";
-
-        for (size_t i = 0; i < dataCount; ++i) {
+        for (size_t i = 0; i < data.size(); ++i) {
             // Find centroid closest to current vector.
-            nearest = nearestObj(data[i], _centroids);
-
-            // If there was a change then there is no convergence.
+            size_t nearest = nearestObj(data[i], _centroids);
             if (nearest != _nearestCentroid[i]) {
                 converged = false;
             }
             _nearestCentroid[i] = nearest;
-
-            //std::cout << nearest << " ";
+            _clusters[nearest]->addNearest(data[i]);
         }
-
         return converged;
     }
 
@@ -282,33 +248,13 @@ private:
      * Post: centroids has been updated with new vector data
      */
     void recalculateCentroids(vector<T*> &data) {
-
-        size_t nearest;
-        size_t dataCount = data.size();
-
-        // Clear the nearest vectors in each cluster
-        for (Cluster<T> *c : _clusters) {
-            //c->getCentroid()->setToZero();
-            c->clearNearest();
-        }
-
-        // Accumlate into clusters
-        for (size_t i = 0; i < dataCount; i++) {
-            nearest = _nearestCentroid[i];
-            _clusters[nearest]->addNearest(data[i]);
-        }
-
-        //std::cout << std::endl;
-
         // Apply prototype function
         for (Cluster<T> *c : _clusters) {
             int count = (int) (c->size());
             if (count > 0) {
                 _protoF(c->getCentroid(), c->getNearestList(), weights);
             }
-            //std::cout << " " << count;
         }
-        //std::cout << "\nRMSE: " << getRMSE(data);
     }
 };
 

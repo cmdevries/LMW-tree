@@ -51,6 +51,11 @@ public:
 
         //size_controller_type sc = _tp.
     }
+    
+    EMTree(Node<T>* root) {
+        _m = -1;
+        _root = root;
+    }    
 
     int getClusterCount() {
         return clusterCount(_root);
@@ -82,9 +87,14 @@ public:
         seed(_root, depth);
     }
 
-    void seedSingleThreaded(vector<T*> &data, deque<int> splits) {
+    void seedSingleThreaded(vector<T*> &data, deque<int> splits, bool updateMeans = true) {
         _root->addAll(data);
-        seedSingleThreaded(_root, splits);        
+        if (updateMeans) {
+            _clusterer.setMaxIters(1);
+        } else {
+            _clusterer.setMaxIters(0);
+        }
+        seedSingleThreaded(_root, splits);
     }
     
     void seedSingleThreaded(Node<T>* current, deque<int> splits) {
@@ -195,7 +205,37 @@ public:
             rebuildInternal();
         }
     }
+    
+    // perform EM-step replacing data in the tree
+    void EMStep(vector<T*> &data) {
 
+        {
+            //boost::timer::auto_cpu_timer t("insert %w secs\n");
+            replace(data);
+        }
+        {
+            //boost::timer::auto_cpu_timer t("prune %w secs\n");
+            int pruned = 1;
+            while (pruned > 0) {
+                pruned = prune();
+                //std::cout << "pruned " << pruned << " nodes" << std::endl;
+            }
+        }
+        {
+            //boost::timer::auto_cpu_timer t("update %w secs\n");
+            rebuildInternal();
+        }
+    }    
+
+    void replace(vector<T*> &data) {
+        removeData(_root, removed);
+        removed.clear();
+        for (T* vector : data) {
+            pushDownNoUpdate(_root, vector);
+        }
+    }
+
+    
     void rearrange() {
 
         removeData(_root, removed);

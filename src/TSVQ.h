@@ -31,6 +31,10 @@ public:
         _clusterer.setNumClusters(_m);
         _clusterer.setMaxIters(maxiters);
     }
+    
+    Node<T>* getMWayTree() {
+        return _root;
+    }
 
     int getClusterCount() {
         return clusterCount(_root);

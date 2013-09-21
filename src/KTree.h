@@ -53,7 +53,14 @@ private:
     // Weights for prototype function (we don't have to use these)
     vector<int> weights;
 
+    // How many vectors have been inserted into the tree.
     size_t _added;
+    
+    // Use delayed updates?
+    bool _delayedUpdates;
+    
+    // Update along insertion path every _updateDelay insertions.
+    int _updateDelay;
 
 public:
 
@@ -64,6 +71,16 @@ public:
         _clusterer.setMaxIters(clustererMaxiters);
         _clusterer.setEnforceNumClusters(true);
         _added = 0;
+        _delayedUpdates = false;
+        _updateDelay = 1000;
+    }
+    
+    void setUpdateDelay(int updateDelay) {
+        _updateDelay = updateDelay;
+    }
+    
+    void setDelayedUpdates(bool delayedUpdates) {
+        _delayedUpdates = delayedUpdates;
     }
 
     int getClusterCount() {
@@ -141,6 +158,7 @@ public:
             _root->add(result._key1, result._child1);
             _root->add(result._key2, result._child2);
         }
+        ++_added;
     }
 
     double getRMSE() {
@@ -405,7 +423,9 @@ private:
                     result.isSplit = false;
                 }
             } else {
-                updatePrototype(nearestChild, nearestKey);
+                if (!_delayedUpdates || (_delayedUpdates && _added % _updateDelay == 0)) {
+                    updatePrototype(nearestChild, nearestKey);
+                }
             }
         }
 
