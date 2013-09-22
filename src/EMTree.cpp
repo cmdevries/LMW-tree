@@ -825,12 +825,14 @@ void clueweb() {
     }
 
     // k-tree
-    if (false) {
+    if (true) {
+        // build tree
         int m = 1000, maxiters = 10;
         cout << "-----" << endl;
         cout << "Building K-tree of order m=" << m
                 << ", k-means maxiters=" << maxiters << endl;
         boost::timer::auto_cpu_timer all;
+        boost::timer::auto_cpu_timer building;
         KTree<vecType, clustererType, distanceType, protoType> kt(m, maxiters);
         kt.setDelayedUpdates(true);
         kt.setUpdateDelay(1000);
@@ -845,16 +847,24 @@ void clueweb() {
             }
         }
         cout << endl;
-        cout << "rearranging K-tree" << endl;
+        building.stop();
+        cout << "Building K-tree took " << building.elapsed().wall / 1e9 << " seconds" << endl;
+        
+        // rearrange leaves
+        boost::timer::auto_cpu_timer rearranging;
+        cout << "Rearranging K-tree" << endl;
         kt.rearrange();
+        cout << "Rearranging K-tree took " << rearranging.elapsed().wall / 1e9 << " seconds" << endl;
+        
+        // print stats
         all.stop();
         kt.printStats();        
         double seconds = all.elapsed().wall / 1e9;
-        cout << "Building K-tree took " << seconds << " seconds" << endl;
+        cout << "K-tree took " << seconds << " seconds" << endl;
     }
     
     // EM-tree
-    if (true) {
+    if (false) {
         int maxiters = 4;
         int clusters = 110000;
         int m = (int)sqrt(clusters);        
@@ -902,24 +912,22 @@ void clueweb() {
     
     // TSVQ EM-tree hybrid
     if (false) {
-        int clusters = 110000;
-        int m = (int)sqrt(clusters);
-        int depth = 3;
-        int maxiters = 4;
-        int sampleSize = 2000000;
-        
-        // sample data
-        vector < SVector<bool>*> sample = vectors;
-        random_shuffle(sample.begin(), sample.end());
-        sample.resize(sampleSize);
-        
         // record time for all operations
         boost::timer::auto_cpu_timer all;
         
+        // sample data
+        int sampleSize = 2000000;
+        vector < SVector<bool>*> sample = vectors;
+        random_shuffle(sample.begin(), sample.end());
+        sample.resize(sampleSize);
+                
         // build TSVQ on sample
+        int clusters = 110000;
+        int m = (int)sqrt(clusters);        
+        int depth = 3;
+        int tsvqMaxiters = 5;        
         boost::timer::auto_cpu_timer tsvqTimer;
-        TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
-        tsvqTimer.start();
+        TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, tsvqMaxiters);
         tsvq.cluster(sample);
         tsvqTimer.stop();
         tsvq.printStats();
@@ -927,27 +935,44 @@ void clueweb() {
         cout << "--------" << endl;
         
         // 2 iterations of EM-tree on all data, using TSVQ sample as seed
+        int emtreeMaxiters = 2;
         EMTree<vecType, clustererType, distanceType, protoType> emtree(tsvq.getMWayTree());
         boost::timer::auto_cpu_timer emtreeTimer;
         {
             boost::timer::auto_cpu_timer iter;
-            emtree.EMStep(vectors);
+            
+            // place all data into TSVQ initialized tree
+            emtree.replace(vectors);
+            cout << "placed all points into TSVQ tree" << endl;
+            emtree.printStats();
+            cout << endl << "--------" << endl;
+            
+            // prune
+            int pruned = 1;
+            while (pruned > 0) {
+                pruned = emtree.prune();
+            }
+            
+            // update means
+            emtree.rebuildInternal();
+            
+            // print stats
             iter.stop();
             cout << "iteration 1 took " << iter.elapsed().wall / 1e9 << " seconds" << endl;
-            cout << "RMSE = " << emtree.getRMSE();
-            cout << "--------" << endl;
+            emtree.printStats();
+            cout << endl << "--------" << endl;
         }
-        for (int i = 1; i < maxiters; ++i) {
+        for (int i = 1; i < emtreeMaxiters; ++i) {
             boost::timer::auto_cpu_timer iter;
             emtree.EMStep();
             iter.stop();
             cout << "iteration " << i + 1 << " took " << iter.elapsed().wall / 1e9 << " seconds" << endl;
-            cout << "RMSE = " << emtree.getRMSE();
+            emtree.printStats();
             cout << "--------" << endl;                    
         }
         emtreeTimer.stop();
         emtree.printStats();
-        cout << endl << "2 iterations of EM-tree took " << emtreeTimer.elapsed().wall / 1e9 << " seconds" << endl;        
+        cout << endl << emtreeMaxiters << " iterations of EM-tree took " << emtreeTimer.elapsed().wall / 1e9 << " seconds" << endl;        
         
         // report all time
         all.stop();
