@@ -12,6 +12,7 @@
 #include <numeric>
 #include <deque>
 #include <algorithm>
+#include <stdexcept>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>

@@ -15,6 +15,7 @@
 #include "KMeans.h"
 #include "BitMapList8.h"
 #include "StdIncludes.h"
+#include "VectorStream.h"
 
 #include "EMTree.h"
 #include "KTree.h"
@@ -235,10 +236,10 @@ void readSignatures(vector<SVector<bool>*> &vectors, string docidFile, string si
 }
 
 void loadWikiSignatures(vector<SVector<bool>*>& vectors, int veccount) {
-    string docidFile = "data/wiki.4096.docids";
-    string signatureFile = "data/wiki.4096.sig";
-    int dims = 4096;
-    readSignatures(vectors, docidFile, signatureFile, dims, veccount);
+    constexpr char docidFile[] = "data/wiki.4096.docids";
+    constexpr char signatureFile[] = "data/wiki.4096.sig";
+    constexpr size_t signatureLength = 4096;
+    readSignatures(vectors, docidFile, signatureFile, signatureLength, veccount);
 }
 
 void loadSubset(vector<SVector<bool>*>& vectors, vector<SVector<bool>*>& subset,
@@ -376,15 +377,28 @@ void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
             meanBitPrototype2 proto;
             proto(mean, vectors, weights);
         }
-        uint64_t sum = 0;
         {
-            boost::timer::auto_cpu_timer hammingTime("hamming distance: %w seconds\n");
-            hammingDistance distance;
-            for (auto vector : vectors) {
-                sum += distance(mean, vector);
+            uint64_t sum = 0;
+            {
+                boost::timer::auto_cpu_timer hammingTime("hamming distance: %w seconds\n");
+                hammingDistance distance;
+                for (auto vector : vectors) {
+                    sum += distance(mean, vector);
+                }
             }
+            cout << "global mean error = " << ((double) sum / vectors.size()) << endl;
         }
-        cout << "global mean error = " << ((double) sum / vectors.size()) << endl;
+        {
+            uint64_t sum = 0;
+            {
+                boost::timer::auto_cpu_timer hammingTime("hamming distance: %w seconds\n");
+                hammingDistance distance;
+                for (auto vector : vectors) {
+                    sum += distance(vectors[0], vector);
+                }
+            }
+            cout << "global error to first vector = " << ((double) sum / vectors.size()) << endl;
+        }
     }
 }
 
@@ -955,10 +969,46 @@ void clueweb() {
     }
 }
 
+void streamingEMTree() {
+    constexpr char docidFile[] = "data/wiki.4096.docids";
+    constexpr char signatureFile[] = "data/wiki.4096.sig";
+    constexpr size_t signatureLength = 4096;
+    constexpr size_t readSize = 1000;
+    size_t read = 0;
+    SVector<bool>* first = NULL;
+    uint64_t sum = 0;
+    BitVectorStream bvs(docidFile, signatureFile, signatureLength);
+    for (;;) {
+        vector<SVector<bool>*> data = bvs.read(readSize);
+        if (data.empty()) {
+            break;
+        }
+        read += data.size();
+        cout << "." << flush;
+        if (read % 100000 == 0) {
+            cout << read;
+        }
+        //process(data);
+        if (!first) {
+            first = new SVector<bool>(data[0]);
+        }
+        hammingDistance distance;
+        for (auto vector : data) {
+            sum += distance(first, vector);
+        }
+        bvs.free(data);
+    }
+    cout << endl << read << endl;
+    cout << "global error to first vector = " << (double)sum / read << endl;    
+}
+
 int main(int argc, char** argv) {
     std::srand(std::time(0));
+    
+    streamingEMTree();
 
-    if (true) {
+/*
+    if (false) {
         clueweb();
     } else {
         // load data
@@ -978,18 +1028,20 @@ int main(int argc, char** argv) {
 
         // run experiments
         if (!vectors.empty() && !subset.empty()) {
-            journalPaperExperiments(subset);
+            //journalPaperExperiments(subset);
             //sigKTreeCluster(vectors);
             //sigTSVQCluster(vectors);
             //sigEMTreeCluster(subset);
             //testHistogram(vectors);
-            //testMeanVersusNNSpeed(vectors);
+            testMeanVersusNNSpeed(vectors);
             //testReadVectors();
             //TestSigEMTree();
         } else {
             cout << "error - vectors or subset empty" << endl;
         }
     }
+*/
+    
     return EXIT_SUCCESS;
 }
 
