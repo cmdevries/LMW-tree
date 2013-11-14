@@ -1,40 +1,42 @@
 #ifndef VECTORSTREAM_H
 #define	VECTORSTREAM_H
 
-#include <vector>
-#include <string>
-
+#include "StdIncludes.h"
 #include "SVector.h"
 
 using namespace std;
 
-// VectorStream provides a stream of vectors usually read from disk. 
-// The only operations supported are:
-//
-// vector<SVector<T>*> VectorStream.read(size_t n)
-//      where n is the number of vectors to read
-//      stream has ended when returned data contains 0 vectors
-//
-// VectorStream.free(vector<T*> data)
-//      frees the memory allocated by the stream
-//
-// For example,
-//      BitVectorStream bvs(idFile, signatureFile);
-//      for (;;) {
-//          vector<SVector<bool>*> data = bvs.read(10000);
-//          if (data.empty()) {
-//              break;
-//          }
-//          process(data);
-//          bvs.free(data);
-//      }
+/**
+ * The VectorStream concept provides a stream of vectors usually read from disk. 
+ * 
+ * The only operations supported are:
+ * 
+ * vector<SVector<T>*> VectorStream.read(size_t n)
+ *      where n is the number of vectors to read
+ *      stream has ended when returned data contains 0 vectors
+ * 
+ * VectorStream.free(vector<T*> data)
+ *      frees the memory allocated by the stream
+ * 
+ * For example,
+ *      BitVectorStream bvs(idFile, signatureFile);
+ *      for (;;) {
+ *          vector<SVector<bool>*> data = bvs.read(10000);
+ *          if (data.empty()) {
+ *              break;
+ *          }
+ *          process(data);
+ *          bvs.free(data);
+ *      }
+ */
 
+// Should this be a specialization of VectorStream<T> ?
 class BitVectorStream {
 public:
     /**
      * @param idFile An ASCII file with one object ID per line.
      * @param signatureFile A file of binary signatures containing as many
-     *                      siganatures as there are lines in idFile. 
+     *                      signatures as there are lines in idFile. 
      * @param signatureLength The length of a signature in bits.
      */
     BitVectorStream(const string& idFile, const string& signatureFile,

@@ -31,6 +31,7 @@ using std::cout;
 using std::endl;
 using std::flush;
 using std::shared_ptr;
+using std::max;
 
 using boost::dynamic_bitset;
 

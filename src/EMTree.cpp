@@ -18,6 +18,7 @@
 #include "VectorStream.h"
 
 #include "EMTree.h"
+#include "StreamingEMTree.h"
 #include "KTree.h"
 #include "TSVQ.h"
 
@@ -995,6 +996,49 @@ void clueweb() {
 }
 
 void streamingEMTree() {
+    typedef SVector<bool> vecType;
+    typedef hammingDistance distanceType;
+    typedef meanBitPrototype2 protoType;
+    typedef Node<vecType> nodeType;
+    typedef RandomSeeder<vecType> seederType;
+    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
+    typedef SVector<uint32_t> ACCUMULATOR;
+    
+    // load data
+    vector < SVector<bool>*> vectors;
+    int veccount = -1;
+    {
+        boost::timer::auto_cpu_timer load("loading signatures: %w seconds\n");
+        loadWikiSignatures(vectors, veccount);
+    }
+
+    // filter data to XML Mining subset
+    vector < SVector<bool>*> subset;
+    {
+        boost::timer::auto_cpu_timer load("filtering subset: %w seconds\n");
+        loadSubset(vectors, subset, "data/inex_xml_mining_subset_2010.txt");
+    }
+
+    // run TSVQ to build tree on sample
+    constexpr int m = 30;
+    constexpr int depth = 3;
+    constexpr int maxiter = 2;
+    TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiter);
+
+    {
+        boost::timer::auto_cpu_timer load("TSVQ subset: %w seconds\n");
+        tsvq.cluster(subset);
+    }
+    
+    // streaming EMTree
+    StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> emtree(tsvq.getMWayTree());
+    int maxDepth = emtree.getMaxLevelCount();
+    cout << "max depth = " << maxDepth << endl;
+    for (int i = 0; i < maxDepth; i++) {
+        cout << "cluster count level " << i + 1 << " = "
+                << emtree.getClusterCount(i + 1) << endl;
+    }
+    
     constexpr char docidFile[] = "data/wiki.4096.docids";
     constexpr char signatureFile[] = "data/wiki.4096.sig";
     constexpr size_t signatureLength = 4096;
@@ -1009,10 +1053,6 @@ void streamingEMTree() {
             break;
         }
         read += data.size();
-        cout << "." << flush;
-        if (read % 100000 == 0) {
-            cout << read;
-        }
         //process(data);
         if (!first) {
             first = new SVector<bool>(data[0]);
@@ -1023,7 +1063,7 @@ void streamingEMTree() {
         }
         bvs.free(data);
     }
-    cout << endl << read << endl;
+    cout << endl << read << " vectors read" << endl;
     cout << "global error to first vector = " << (double)sum / read << endl;    
 }
 
