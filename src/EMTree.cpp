@@ -25,14 +25,16 @@
 #include <set>
 using std::set;
 
+typedef SVector<bool> vecType;
+typedef hammingDistance distanceType;
+typedef meanBitPrototype2 protoType;
+typedef Node<vecType> nodeType;
+typedef RandomSeeder<vecType> seederType;
+typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
+typedef SVector<int> ACCUMULATOR;
+
 void sigKmeansCluster(vector<SVector<bool>*> &vectors, const string& clusterFile) {
     // Define the types we want to use
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef RandomSeeder<vecType> seederType;
-    //typedef DSquaredSeeder<vecType, distanceType > seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
     int k = 36;
     int maxiters = 10;
     clustererType clusterer(k);
@@ -56,14 +58,6 @@ void sigKmeansCluster(vector<SVector<bool>*> &vectors, const string& clusterFile
 }
 
 void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
-    // Define the types we want to use
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef RandomSeeder<vecType> seederType;
-    //typedef DSquaredSeeder<vecType, distanceType > seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-
     // EMTree
     int depth = 3;
     int iters = 2;
@@ -80,34 +74,31 @@ void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
 }
 
 void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
-    // Define the types we want to use
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef RandomSeeder<vecType> seederType;
-    //typedef DSquaredSeeder<vecType, distanceType > seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-
     // EMTree
     int depth = 3;
     int iters = 10;
-    vector<int> nodeSizes = {10}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    vector<int> nodeSizes = {30}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
         EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+        deque<int> splits;
+        for (int i = 0; i < depth - 1; i++) {
+            splits.push_back(m);
+        }
 
         boost::timer::auto_cpu_timer all;
         {
             boost::timer::auto_cpu_timer seed("\nseeding tree: %w seconds\n");
-            emt.seed(vectors, depth);
+            bool updateMeans = false;
+            emt.seedSingleThreaded(vectors, splits, updateMeans);
             emt.printStats();
         }
         for (int i = 0; i < iters; ++i) {
             {
                 //std::cout << i << std::endl;
-                //boost::timer::auto_cpu_timer loop("iteration: %w seconds\n");
+                boost::timer::auto_cpu_timer loop("iteration: %w seconds\n");
                 emt.EMStep();
-                //emt.printStats();
+                emt.printStats();
                 //std::cout << std::endl;
             }
         }
@@ -125,16 +116,6 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
 }
 
 void sigKTreeCluster(vector<SVector<bool>*> &vectors) {
-
-    // Define the types we want to use
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef Node<vecType> nodeType;
-    //typedef DSquaredSeeder<vecType, distanceType > seederType;
-    typedef RandomSeeder<vecType> seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-
     ClusterCounter<nodeType> counter;
 
     // KTree algorithm
@@ -268,8 +249,6 @@ void genData(vector<SVector<bool>*> &vectors, size_t sigSize, size_t numVectors)
     RND_BERN_GEN_01 gen(eng, bd);
 
     // Define the types we want to use
-    typedef SVector<bool> vecType;
-
     typedef VectorGenerator<RND_BERN_GEN_01, vecType> vecGenerator;
 
     // Create the seeder
@@ -441,14 +420,6 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
     if (true) {
         testMeanVersusNNSpeed(vectors);
     }
-
-    // types for data
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef Node<vecType> nodeType;
-    typedef RandomSeeder<vecType> seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
     
     // global experimental parameters
     const int trials = 20;
@@ -819,15 +790,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
     }    
 }
 
-void clueweb() {
-    // types for data
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef Node<vecType> nodeType;
-    typedef RandomSeeder<vecType> seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-    
+void clueweb() {    
     // load vectors
     string docidFile = "data/clueweb.4096.docids";
     string signatureFile = "data/clueweb.4096.signatures";
@@ -995,15 +958,9 @@ void clueweb() {
     }
 }
 
-void streamingEMTree() {
-    typedef SVector<bool> vecType;
-    typedef hammingDistance distanceType;
-    typedef meanBitPrototype2 protoType;
-    typedef Node<vecType> nodeType;
-    typedef RandomSeeder<vecType> seederType;
-    typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-    typedef SVector<uint32_t> ACCUMULATOR;
-    
+typedef StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> StreamingEMTree_t;
+
+StreamingEMTree_t* streamingEMTreeInit() {
     // load data
     vector < SVector<bool>*> vectors;
     int veccount = -1;
@@ -1022,49 +979,82 @@ void streamingEMTree() {
     // run TSVQ to build tree on sample
     constexpr int m = 30;
     constexpr int depth = 3;
-    constexpr int maxiter = 2;
+    constexpr int maxiter = 0;
     TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiter);
 
     {
-        boost::timer::auto_cpu_timer load("TSVQ subset: %w seconds\n");
+        boost::timer::auto_cpu_timer load("cluster subset using TSVQ: %w seconds\n");
         tsvq.cluster(subset);
     }
-    
-    // streaming EMTree
-    StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> emtree(tsvq.getMWayTree());
-    int maxDepth = emtree.getMaxLevelCount();
-    cout << "max depth = " << maxDepth << endl;
-    for (int i = 0; i < maxDepth; i++) {
-        cout << "cluster count level " << i + 1 << " = "
-                << emtree.getClusterCount(i + 1) << endl;
+
+    cout << "initializing streaming EM-tree based on TSVQ subset sample" << endl;
+    cout << "TSVQ iterations = " << maxiter << endl;
+    auto tree = new StreamingEMTree_t(tsvq.getMWayTree());
+
+    for (auto v : vectors) {
+        delete v;
     }
-    
+
+    return tree;
+}
+
+void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
     constexpr char docidFile[] = "data/wiki.4096.docids";
     constexpr char signatureFile[] = "data/wiki.4096.sig";
     constexpr size_t signatureLength = 4096;
     constexpr size_t readSize = 1000;
-    size_t read = 0;
-    SVector<bool>* first = NULL;
-    uint64_t sum = 0;
+
     BitVectorStream bvs(docidFile, signatureFile, signatureLength);
+
+    // insert from stream
+    size_t read = 0;
+    boost::timer::auto_cpu_timer insert("inserting into streaming EM-tree: %w seconds\n");
+    insert.start();
     for (;;) {
-        vector<SVector<bool>*> data = bvs.read(readSize);
+        vector < SVector<bool>*> data = bvs.read(readSize);
         if (data.empty()) {
             break;
         }
         read += data.size();
-        //process(data);
-        if (!first) {
-            first = new SVector<bool>(data[0]);
-        }
-        hammingDistance distance;
-        for (auto vector : data) {
-            sum += distance(first, vector);
-        }
+        emtree->insert(data);
         bvs.free(data);
     }
-    cout << endl << read << " vectors read" << endl;
-    cout << "global error to first vector = " << (double)sum / read << endl;    
+    insert.stop();
+    cout << read << " vectors streamed from disk" << endl;
+    insert.report();
+
+    // prune
+    int pruned = emtree->prune();
+    cout << pruned << " nodes pruned" << endl;
+
+    // report
+    int maxDepth = emtree->getMaxLevelCount();
+    cout << "max depth = " << maxDepth << endl;
+    for (int i = 0; i < maxDepth; i++) {
+        cout << "cluster count level " << i + 1 << " = "
+                << emtree->getClusterCount(i + 1) << endl;
+    }
+    cout << "streaming EM-tree had " << emtree->getObjCount() << " vectors inserted" << endl;
+    cout << "RMSE = " << emtree->getRMSE() << endl;    
+}
+
+void streamingEMTree() {
+    // streaming EMTree
+    constexpr int maxIters = 10;
+    StreamingEMTree_t* emtree = streamingEMTreeInit();
+    cout << endl << "Streaming EM-tree:" << endl;
+    for (int i = 0; i < maxIters - 1; i++) {
+        cout << "ITERATION " << i << endl;
+        streamingEMTreeInsertPruneReport(emtree);
+        {
+            boost::timer::auto_cpu_timer update("update streaming EM-tree: %w seconds\n");
+            emtree->update();
+        }
+        cout << "-----" << endl << endl;
+    }
+    
+    // last iteration requires no update
+    streamingEMTreeInsertPruneReport(emtree);
 }
 
 int main(int argc, char** argv) {
@@ -1096,17 +1086,18 @@ int main(int argc, char** argv) {
             //journalPaperExperiments(subset);
             //sigKTreeCluster(vectors);
             //sigTSVQCluster(vectors);
-            //sigEMTreeCluster(subset);
+            sigEMTreeCluster(vectors);
             //testHistogram(vectors);
-            testMeanVersusNNSpeed(vectors);
+            //testMeanVersusNNSpeed(vectors);
             //testReadVectors();
             //TestSigEMTree();
         } else {
             cout << "error - vectors or subset empty" << endl;
         }
     }
-*/
+ */
     
     return EXIT_SUCCESS;
 }
 
+  

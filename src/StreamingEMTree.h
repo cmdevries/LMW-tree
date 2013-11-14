@@ -32,14 +32,25 @@ public:
         _root(new Node<AccumulatorKey>()) {
             deepCopy(root, _root);
     }
-    
-    void insert(vector<T*> data) {
+        
+    ~StreamingEMTree() {
+        delete _root;
     }
     
-    void prune() {
+    void insert(vector<T*>& data) {
+        for (T* object : data) {
+            insert(_root, object);
+        }
+    }
+    
+    int prune() {
+        return prune(_root);
     }
     
     void update() {
+        for (int depth = getMaxLevelCount(); depth >= 1; --depth) {
+            update(_root, depth);
+        }        
     }
     
     int getMaxLevelCount() {
@@ -50,13 +61,127 @@ public:
         return clusterCount(_root, depth);
     }
     
+    int getObjCount() {
+        return objCount(_root);
+    }
+    
+    double getRMSE() {
+        double RMSE = sumSquaredError(_root);
+        int size = getObjCount();
+        RMSE /= size;
+        RMSE = sqrt(RMSE);
+        return RMSE;
+    }
+
 private:
     struct AccumulatorKey {
         T* key;
+        double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
-        uint32_t count; // how many vectors have been added to accumulator
+        int count; // how many vectors have been added to accumulator
     };
     
+    size_t nearest(Node<AccumulatorKey>* node, T* object, float* nearestDistance) {
+        size_t nearest = 0;
+        *nearestDistance = _dist(object, node->getKey(0)->key);
+        for (size_t i = 1; i < node->size(); i++) {
+            float dist = _dist(object, node->getKey(i)->key);
+            if (dist < *nearestDistance) {
+                *nearestDistance = dist;
+                nearest = i;
+            }
+        }
+        return nearest;
+    }   
+    
+    void insert(Node<AccumulatorKey>* node, T* object) {
+        float nearestDistance = 0;
+        size_t nearestIndex = nearest(node, object, &nearestDistance);
+        if (node->isLeaf()) {
+            auto accumulatorKey = node->getKey(nearestIndex);
+            T* key = accumulatorKey->key;
+            accumulatorKey->sumSquaredError += nearestDistance * nearestDistance;
+            ACCUMULATOR* accumulator = accumulatorKey->accumulator;
+            for (size_t i = 0; i < accumulator->size(); i++) {
+                (*accumulator)[i] += (*object)[i];
+            }
+            accumulatorKey->count++;
+        } else {
+            insert(node->getChild(nearestIndex), object);
+        }
+    }
+
+    int prune(Node<AccumulatorKey>* node) {
+        int pruned = 0;
+        vector<Node<AccumulatorKey>*>& children = node->getChildren();
+        for (int i = 0; i < children.size(); i++) {
+            if (objCount(children[i]) == 0) {
+                node->remove(i);
+                pruned++;
+            } else {
+                pruned += prune(children[i]);
+            }
+        }
+        node->finalizeRemovals();
+        return pruned;
+    }
+    
+    /**
+     * TODO(cdevries): Make it work for something other than bitvectors. It needs
+     * to be parameterized, for example, with float vectors, a mean is taken.
+     */
+    void updatePrototypeFromAccumulators(AccumulatorKey* accumulatorKey) {
+        // calculate new key based on accumulator
+        T* key = accumulatorKey->key;
+        ACCUMULATOR* accumulator = accumulatorKey->accumulator;
+        int halfCount = accumulatorKey->count / 2;
+        key->setAllBlocks(0);
+        for (size_t i = 0; i < key->size(); i++) {
+            if ((*accumulator)[i] > halfCount) {
+                key->set(i);
+            }
+        }
+
+        // reset accumulators for next insert
+        accumulatorKey->sumSquaredError = 0;
+        accumulatorKey->accumulator->setAll(0);
+        accumulatorKey->count = 0;
+    }
+    
+    void updatePrototype(Node<AccumulatorKey>* childNode, T* parentKey) {
+        vector<int> weights;
+        if (!childNode->isLeaf()) {
+            for (auto child : childNode->getChildren()) {
+                weights.push_back(objCount(child));
+            }
+        }
+        vector<T*> childKeys;
+        for (auto accumulatorKey : childNode->getKeys()) {
+            childKeys.push_back(accumulatorKey->key);
+        }
+        _prototype(parentKey, childKeys, weights);
+    }    
+    
+    void update(Node<AccumulatorKey>* node, int depth) {
+        if (depth == 1) {
+            if (node->isLeaf()) {
+                for (auto accumulatorKey : node->getKeys()) {
+                    updatePrototypeFromAccumulators(accumulatorKey);
+                }
+            } else {
+                auto children = node->getChildren();
+                auto keys = node->getKeys();
+                for (int i = 0; i < children.size(); i++) {
+                    updatePrototype(children[i], keys[i]->key);
+                }
+            }
+        } else {
+            for (auto child : node->getChildren()) {
+                update(child, depth - 1);
+            }
+        }
+    }
+        
     void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
             size_t dimensions = src->getKey(0)->size();
@@ -65,12 +190,14 @@ private:
                 auto child = src->getChild(i);
                 auto accumulatorKey = new AccumulatorKey();
                 accumulatorKey->key = new T(key);
+                accumulatorKey->sumSquaredError = 0;
                 accumulatorKey->accumulator = NULL;
                 accumulatorKey->count = 0;
                 if (child->isLeaf()) {
                     // Do not copy leaves of original tree and setup
                     // accumulators for the lowest level cluster means.
                     accumulatorKey->accumulator = new ACCUMULATOR(dimensions);
+                    accumulatorKey->accumulator->setAll(0);
                     dst->add(accumulatorKey);
                 } else {
                     auto newChild = new Node<AccumulatorKey>();
@@ -80,6 +207,38 @@ private:
             }
         }
     }
+    
+    double sumSquaredError(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            double localSum = 0;
+            for (auto key : node->getKeys()) {
+                localSum += key->sumSquaredError;
+            }
+            return localSum;
+        } else {
+            double localSum = 0;
+            for (auto child : node->getChildren()) {
+                localSum += sumSquaredError(child);
+            }
+            return localSum;
+        }        
+    }
+    
+    int objCount(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            int localCount = 0;
+            for (auto key : node->getKeys()) {
+                localCount += key->count;
+            }
+            return localCount;
+        } else {
+            int localCount = 0;
+            for (auto child : node->getChildren()) {
+                localCount += objCount(child);
+            }
+            return localCount;
+        }
+    }    
 
     int maxLevelCount(Node<AccumulatorKey>* current) {
         if (current->isLeaf()) {

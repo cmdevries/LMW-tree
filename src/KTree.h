@@ -541,7 +541,7 @@ private:
             vector<Node<T>*>& children = child->getChildren();
 
             for (size_t i = 0; i < children.size(); i++) {
-                weights.push_back(children[i]->size());
+                weights.push_back(objCount(children[i]));
             }
         }
 

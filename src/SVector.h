@@ -45,7 +45,11 @@ public:
 	iterator begin() { return &_data[0]; }
 	iterator end() { return &_data[_length]; }
 
-	T at(size_t i) {
+        T& operator[](size_t i) {
+            return at(i);
+        }
+        
+	T& at(size_t i) {
 		return _data[i];
 	}
 
@@ -184,6 +188,10 @@ public:
 	int isSet(int i) {
 		return ((_data[i>>BITS_WS] & (1LL << (i & MASK)))!=0); 		
 	}
+        
+        int operator[](int i) {
+            return at(i);
+        }
 
 	int at(int i) {
 		return ((_data[i>>BITS_WS] & (1LL << (i & MASK)))!=0); 		

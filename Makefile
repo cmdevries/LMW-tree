@@ -11,7 +11,7 @@ emtree: EMTree.o
 EMTree.o: src/EMTree.cpp
 	$(CC) -c $(CFLAGS) $<
 
-.PHONY: clean cleanest
+.PHONY: clean cleanest EMTree.o emtree
 
 clean:
 	rm -f *.o

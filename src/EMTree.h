@@ -189,11 +189,11 @@ public:
     void EMStep() {
 
         {
-            //boost::timer::auto_cpu_timer t("insert %w secs\n");
+            boost::timer::auto_cpu_timer t("insert %w secs\n");
             rearrange();
         }
         {
-            //boost::timer::auto_cpu_timer t("prune %w secs\n");
+            boost::timer::auto_cpu_timer t("prune %w secs\n");
             int pruned = 1;
             while (pruned > 0) {
                 pruned = prune();
@@ -201,7 +201,7 @@ public:
             }
         }
         {
-            //boost::timer::auto_cpu_timer t("update %w secs\n");
+            boost::timer::auto_cpu_timer t("update %w secs\n");
             rebuildInternal();
         }
     }
@@ -645,7 +645,7 @@ SplitResult<T> pushDown(Node<T> *n, T *vec) {
             vector<Node<T>*>& children = child->getChildren();
 
             for (size_t i = 0; i < children.size(); i++) {
-                weights.push_back(children[i]->size());
+                weights.push_back(objCount(children[i]));
             }
         }
 

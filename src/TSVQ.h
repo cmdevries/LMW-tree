@@ -32,6 +32,10 @@ public:
         _clusterer.setMaxIters(maxiters);
     }
     
+    ~TSVQ() {
+        delete _root;
+    }
+    
     Node<T>* getMWayTree() {
         return _root;
     }
@@ -93,7 +97,6 @@ public:
 
 
 private:
-
     double RMSE() {
         double RMSE = sumSquaredError(NULL, _root);
         int size = getObjCount();

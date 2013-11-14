@@ -6,7 +6,6 @@
 template <typename T>
 class Node {
 private:
-
     // In Leaf nodes the keys are the data.
     vector<T*> _keys;
 
@@ -14,19 +13,17 @@ private:
     vector<Node*> _children;
 
     bool _isLeaf;
-    bool _ownsData;
-
-
+    
 public:
 
     Node() {
         _isLeaf = true;
-        _ownsData = false;
     }
-
+    
     ~Node() {
-        // Clean up storage
-        removeAll();
+        for (size_t i = 0; i < size(); i++) {
+            remove(i);
+        }
     }
 
     bool isEmpty() {
@@ -39,14 +36,6 @@ public:
 
     int size() {
         return _keys.size();
-    }
-
-    void setOwnsData(bool owns) {
-        _ownsData = owns;
-    }
-
-    bool ownsData() {
-        return _ownsData;
     }
 
     T* getKey(int i) {
@@ -113,10 +102,7 @@ public:
     }
 
     void remove(int i) {
-        if (_isLeaf) {
-            if (_ownsData) delete _keys[i];
-            _keys[i] = NULL;
-        } else {
+        if (!_isLeaf) {
             // Free the memory for the centroid key
             delete _keys[i];
             _keys[i] = NULL;
@@ -124,23 +110,6 @@ public:
             delete _children[i];
             _children[i] = NULL;
         }
-    }
-
-    void removeAll() {
-
-        if (_ownsData) {
-            //std::cout << "-";
-            for (T* k : _keys) delete k;
-        }
-        _keys.clear();
-
-        if (!_isLeaf) {
-            //std::cout << "-";
-            for (Node* n : _children) delete n;
-        }
-        _children.clear();
-
-        _isLeaf = true;
     }
 
     // Use this to finalize individual removals.
