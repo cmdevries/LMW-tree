@@ -23,6 +23,7 @@ struct SplitResult {
 
 };
 
+// KTree class
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class KTree {
 private:
@@ -55,10 +56,10 @@ private:
 
     // How many vectors have been inserted into the tree.
     size_t _added;
-    
+
     // Use delayed updates?
     bool _delayedUpdates;
-    
+
     // Update along insertion path every _updateDelay insertions.
     int _updateDelay;
 
@@ -74,11 +75,11 @@ public:
         _delayedUpdates = false;
         _updateDelay = 1000;
     }
-    
+
     void setUpdateDelay(int updateDelay) {
         _updateDelay = updateDelay;
     }
-    
+
     void setDelayedUpdates(bool delayedUpdates) {
         _delayedUpdates = delayedUpdates;
     }
@@ -86,7 +87,7 @@ public:
     int getClusterCount() {
         return clusterCount(_root);
     }
-    
+
     int getClusterCount(int depth) {
         return clusterCount(_root, depth);
     }
@@ -115,7 +116,7 @@ public:
         // Cluster counts no longer include empty clusters
         //cout << "Empty Cluster count: " << empty << endl;
         //cout << "Non-empty Cluster count: " << count - empty << endl;
-        
+
         cout << "RMSE: " << getRMSE() << endl;
     }
 
@@ -264,7 +265,7 @@ private:
             return localCount;
         }
     }
-    
+
     int clusterCount(Node<T>* current, int depth) {
         if (depth == 1) {
             int localCount = 0;
@@ -283,7 +284,7 @@ private:
             return localCount;
         }
     }
-    
+
 
     int emptyClusterCount(Node<T>* current) {
         if (current->isLeaf()) {
@@ -452,7 +453,7 @@ private:
         tempChildren = parent->getChildren();
         tempChildren.push_back(child);
 
-        // DetachRemove children from child node		
+        // DetachRemove children from child node
         parent->clearKeysAndChildren();
 
         // At this point we have 2 clear nodes: "parent" node (node 1) and "node2"
@@ -465,14 +466,14 @@ private:
 
         // Get nearest centroids after clustering
         tempNearCentroids = _clusterer.getNearestCentroids();
-        
+
 
         for (int i = 0; i < tempNearCentroids.size(); i++) {
             if (tempNearCentroids[i] == 0) parent->add(tempKeys[i], tempChildren[i]);
             else node2->add(tempKeys[i], tempChildren[i]);
         }
 
-        // Now make our split result		
+        // Now make our split result
         result.isSplit = true;
         result._child1 = parent;
         result._child2 = node2;
@@ -499,7 +500,7 @@ private:
         tempKeys = child->getKeys();
         tempKeys.push_back(obj);
 
-        // DetachRemove children from child node		
+        // DetachRemove children from child node
         child->clearKeysAndChildren();
 
         // At this point we have 2 clear nodes: "child" node (node 1) and "node2"
@@ -518,7 +519,7 @@ private:
             else node2->add(tempKeys[i]);
         }
 
-        // Now make our split result		
+        // Now make our split result
         result.isSplit = true;
         result._child1 = child;
         result._child2 = node2;
