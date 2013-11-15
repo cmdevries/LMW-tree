@@ -2,6 +2,8 @@
 #define	STREAMINGEMTREEEXPERIMENTS_H
 
 #include "StdIncludes.h"
+#include "tbb/pipeline.h"
+#include "tbb/task_scheduler_init.h"
 
 #include "CreateSignatures.h"
 
@@ -53,29 +55,83 @@ StreamingEMTree_t* streamingEMTreeInit() {
     return tree;
 }
 
+class InputFilter : public tbb::filter {
+public:
+    InputFilter(BitVectorStream* bvs, size_t readsize = 1000) : 
+        filter(serial_out_of_order),
+        _bvs(bvs),
+        _readsize(readsize),
+        _read(0)
+        { }
+        
+    ~InputFilter() { }
+
+    size_t read() {
+        return _read;
+    }
+    
+private:
+    BitVectorStream* _bvs;
+    size_t _readsize;
+    size_t _read;
+
+    void* operator()(void*) {
+        auto data = new vector<SVector<bool>*>;
+        *data = _bvs->read(_readsize);
+        if (data->empty()) {
+            delete data;
+            return NULL;
+        }
+        _read += data->size();
+        return data;
+    }
+};
+
+class InsertFilter : public tbb::filter {
+public:
+    InsertFilter(BitVectorStream* bvs, StreamingEMTree_t* emtree) :
+        filter(parallel),
+        _bvs(bvs),
+        _emtree(emtree)
+        { }
+    
+    ~InsertFilter() { }
+    
+private:
+    BitVectorStream* _bvs;
+    StreamingEMTree_t* _emtree;
+    
+    void* operator()(void* item) {
+        auto data = (vector<SVector<bool>*>*)item;
+        _emtree->insert(*data);
+        _bvs->free(*data);
+        delete data;
+    }
+};
+
 void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
     constexpr char docidFile[] = "data/wiki.4096.docids";
     constexpr char signatureFile[] = "data/wiki.4096.sig";
     constexpr size_t signatureLength = 4096;
     constexpr size_t readSize = 1000;
 
+    // open files
     BitVectorStream bvs(docidFile, signatureFile, signatureLength);
+    
+    // setup processing pipeline
+    constexpr int threads = 4;
+    tbb::pipeline pipeline;
+    InputFilter inputFilter(&bvs);
+    pipeline.add_filter(inputFilter);
+    InsertFilter insertFilter(&bvs, emtree);
+    pipeline.add_filter(insertFilter);    
 
     // insert from stream
-    size_t read = 0;
     boost::timer::auto_cpu_timer insert("inserting into streaming EM-tree: %w seconds\n");
     insert.start();
-    for (;;) {
-        vector < SVector<bool>*> data = bvs.read(readSize);
-        if (data.empty()) {
-            break;
-        }
-        read += data.size();
-        emtree->insert(data);
-        bvs.free(data);
-    }
+    pipeline.run(threads);
     insert.stop();
-    cout << read << " vectors streamed from disk" << endl;
+    cout << inputFilter.read() << " vectors streamed from disk" << endl;
     insert.report();
 
     // prune
@@ -94,6 +150,14 @@ void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
 }
 
 void streamingEMTree() {
+    // initialize TBB
+    const bool parallel = true;
+    if (parallel) {
+        tbb::task_scheduler_init init_parallel();
+    } else {
+        tbb::task_scheduler_init init_serial(1);
+    }
+
     // streaming EMTree
     constexpr int maxIters = 10;
     StreamingEMTree_t* emtree = streamingEMTreeInit();

@@ -1,6 +1,8 @@
 #ifndef STREAMINGEMTREE_H
 #define	STREAMINGEMTREE_H
 
+#include "tbb/mutex.h"
+
 /**
  * The streaming version of the EM-tree algorithm does not store the
  * data vectors in the tree. Therefore, the leaf level in the tree contain
@@ -37,6 +39,9 @@ public:
         delete _root;
     }
     
+    /**
+     * Insert is thread safe. Shared accumulators are locked.
+     */
     void insert(vector<T*>& data) {
         for (T* object : data) {
             insert(_root, object);
@@ -74,12 +79,19 @@ public:
     }
 
 private:
+    typedef tbb::mutex Mutex;
+    
     struct AccumulatorKey {
         T* key;
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
         int count; // how many vectors have been added to accumulator
+        Mutex lock;
     };
+    
+    Node<AccumulatorKey>* _root;
+    DISTANCE _dist;
+    PROTOTYPE _prototype;    
     
     size_t nearest(Node<AccumulatorKey>* node, T* object, float* nearestDistance) {
         size_t nearest = 0;
@@ -99,6 +111,7 @@ private:
         size_t nearestIndex = nearest(node, object, &nearestDistance);
         if (node->isLeaf()) {
             auto accumulatorKey = node->getKey(nearestIndex);
+            accumulatorKey->lock.lock();
             T* key = accumulatorKey->key;
             accumulatorKey->sumSquaredError += nearestDistance * nearestDistance;
             ACCUMULATOR* accumulator = accumulatorKey->accumulator;
@@ -106,6 +119,7 @@ private:
                 (*accumulator)[i] += (*object)[i];
             }
             accumulatorKey->count++;
+            accumulatorKey->lock.unlock();
         } else {
             insert(node->getChild(nearestIndex), object);
         }
@@ -263,10 +277,6 @@ private:
             return localCount;
         }
     }    
-    
-    Node<AccumulatorKey>* _root;
-    DISTANCE _dist;
-    PROTOTYPE _prototype;    
 };
  
 #endif	/* STREAMINGEMTREE_H */
