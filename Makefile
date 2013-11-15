@@ -1,17 +1,19 @@
 CC = g++
-CFLAGS = -I/Users/chris/boost_1_55_0 -std=c++0x -O2 -march=native -mtune=native
-#CFLAGS = -I/Users/chris/boost_1_55_0 -std=c++0x -O0 -ggdb 
-LDFLAGS = -L/Users/chris/boost_1_55_0/stage/lib -L/opt/local/lib -lpthread -lboost_system -lboost_thread -lboost_timer #-lrt
+INC_PATH = -I/Users/chris/boost_1_55_0 \
+    -I/Users/chris/tbb41_20130516oss/include
+LIB_PATH = -L/Users/chris/boost_1_55_0/stage/lib \
+    -L/Users/chris/tbb41_20130516oss/build/macos_intel64_gcc_cc4.8.2_os10.9_release
+LIBS = -lpthread -lboost_system -lboost_thread -lboost_timer #-lrt
+CFLAGS = -std=c++0x -O2 -march=native -mtune=native $(INC_PATH)
+#CFLAGS = -std=c++0x -O0 -ggdb $(INC_PATH)
+LDFLAGS = $(LIB_PATH) $(LIBS)
 
 all: emtree
 
-emtree: EMTree.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+emtree: src/EMTree.cpp
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
-EMTree.o: src/EMTree.cpp
-	$(CC) -c $(CFLAGS) $<
-
-.PHONY: clean cleanest EMTree.o emtree
+.PHONY: clean cleanest emtree
 
 clean:
 	rm -f *.o
