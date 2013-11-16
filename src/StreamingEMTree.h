@@ -86,7 +86,7 @@ private:
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
         int count; // how many vectors have been added to accumulator
-        Mutex lock;
+        Mutex* mutex;
     };
     
     Node<AccumulatorKey>* _root;
@@ -111,7 +111,7 @@ private:
         size_t nearestIndex = nearest(node, object, &nearestDistance);
         if (node->isLeaf()) {
             auto accumulatorKey = node->getKey(nearestIndex);
-            accumulatorKey->lock.lock();
+            accumulatorKey->mutex->lock();
             T* key = accumulatorKey->key;
             accumulatorKey->sumSquaredError += nearestDistance * nearestDistance;
             ACCUMULATOR* accumulator = accumulatorKey->accumulator;
@@ -119,7 +119,7 @@ private:
                 (*accumulator)[i] += (*object)[i];
             }
             accumulatorKey->count++;
-            accumulatorKey->lock.unlock();
+            accumulatorKey->mutex->unlock();
         } else {
             insert(node->getChild(nearestIndex), object);
         }
@@ -207,11 +207,13 @@ private:
                 accumulatorKey->sumSquaredError = 0;
                 accumulatorKey->accumulator = NULL;
                 accumulatorKey->count = 0;
+                accumulatorKey->mutex = NULL;
                 if (child->isLeaf()) {
                     // Do not copy leaves of original tree and setup
                     // accumulators for the lowest level cluster means.
                     accumulatorKey->accumulator = new ACCUMULATOR(dimensions);
                     accumulatorKey->accumulator->setAll(0);
+                    accumulatorKey->mutex = new Mutex();
                     dst->add(accumulatorKey);
                 } else {
                     auto newChild = new Node<AccumulatorKey>();
