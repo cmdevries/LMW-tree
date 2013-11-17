@@ -66,7 +66,7 @@ public:
         return clusterCount(_root, depth);
     }
     
-    int getObjCount() {
+    uint64_t getObjCount() {
         return objCount(_root);
     }
     
@@ -85,7 +85,7 @@ private:
         T* key;
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
-        int count; // how many vectors have been added to accumulator
+        uint64_t count; // how many vectors have been added to accumulator
         Mutex* mutex;
     };
     
@@ -240,15 +240,15 @@ private:
         }        
     }
     
-    int objCount(Node<AccumulatorKey>* node) {
+    uint64_t objCount(Node<AccumulatorKey>* node) {
         if (node->isLeaf()) {
-            int localCount = 0;
+            uint64_t localCount = 0;
             for (auto key : node->getKeys()) {
                 localCount += key->count;
             }
             return localCount;
         } else {
-            int localCount = 0;
+            uint64_t localCount = 0;
             for (auto child : node->getChildren()) {
                 localCount += objCount(child);
             }

@@ -44,7 +44,7 @@ public:
         return clusterCount(_root);
     }
 
-    int getObjCount() {
+    uint64_t getObjCount() {
         return objCount(_root);
     }
 
@@ -130,12 +130,11 @@ private:
         return distance;
     }
 
-    int objCount(Node<T>* current) {
-
+    uint64_t objCount(Node<T>* current) {
         if (current->isLeaf()) {
             return current->size();
         } else {
-            int localCount = 0;
+            uint64_t localCount = 0;
             vector<Node<T>*>& children = current->getChildren();
             for (Node<T> *child : children) {
                 localCount += objCount(child);
