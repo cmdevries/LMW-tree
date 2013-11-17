@@ -11,27 +11,38 @@ using namespace std;
  * 
  * The only operations supported are:
  * 
- * vector<SVector<T>*> VectorStream.read(size_t n)
- *      where n is the number of vectors to read
- *      stream has ended when returned data contains 0 vectors
+ * size_t VectorStream<T>.read(size_t n, vector<SVector<T>*>* data)
+ *      where n is the number of vectors to read into data
+ *      stream has ended when return == 0
  * 
- * VectorStream.free(vector<T*> data)
+ * VectorStream<T>.free(vector<T*>& data)
  *      frees the memory allocated by the stream
  * 
  * For example,
- *      BitVectorStream bvs(idFile, signatureFile);
+ *      VectorStream<bool> bvs(idFile, signatureFile);
  *      for (;;) {
- *          vector<SVector<bool>*> data = bvs.read(10000);
- *          if (data.empty()) {
+ *          vector<SVector<bool>*> data;
+ *          size_t read = bvs.read(10000, &data);
+ *          if (read == 0) {
  *              break;
  *          }
- *          process(data);
- *          bvs.free(data);
+ *          process(&data);
+ *          bvs.free(&data);
  *      }
  */
+template <typename SVECTOR>
+class SVectorStream {
+    size_t read(size_t n, vector<SVECTOR*>* data) {
+        return 0;
+    }
+    
+    void free(vector<SVECTOR*>* data) {
+        
+    }
+};
 
-// Should this be a specialization of VectorStream<T> ?
-class BitVectorStream {
+template <>
+class SVectorStream<SVector<bool>> {
 public:
     /**
      * @param idFile An ASCII file with one object ID per line.
@@ -39,7 +50,7 @@ public:
      *                      signatures as there are lines in idFile. 
      * @param signatureLength The length of a signature in bits.
      */
-    BitVectorStream(const string& idFile, const string& signatureFile,
+    SVectorStream(const string& idFile, const string& signatureFile,
             const size_t signatureLength) : _buffer(signatureLength / 8, 0),
             _idStream(idFile),
             _signatureStream(signatureFile, ios::in | ios::binary),
@@ -55,24 +66,24 @@ public:
                 }
     }
 
-    vector<SVector<bool>*> read(size_t n) {
+    size_t read(size_t n, vector<SVector<bool>*>* data) {
         string id;
-        vector < SVector<bool>*> data;
+        size_t read = 0;
         while (getline(_idStream, id)) {
             _signatureStream.read(&_buffer[0], _buffer.size());
             SVector<bool>* vector = new SVector<bool>(&_buffer[0],
                     _signatureLength);
             vector->setID(id);
-            data.push_back(vector);
-            if (data.size() == n) {
+            data->push_back(vector);
+            if (++read == n) {
                 break;
             }
         }
-        return data;
+        return read;
     }
     
-    void free(vector<SVector<bool>*> data) {
-        for (auto vector : data) {
+    void free(vector<SVector<bool>*>* data) {
+        for (auto vector : *data) {
             delete vector;
         }
     }

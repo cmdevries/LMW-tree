@@ -1,7 +1,68 @@
 #ifndef STREAMINGEMTREE_H
 #define	STREAMINGEMTREE_H
 
+#include "StdIncludes.h"
+#include "SVectorStream.h"
 #include "tbb/mutex.h"
+#include "tbb/pipeline.h"
+
+// TBB Filters for parallel insertion into Streaming EM-tree
+
+template <typename SVECTOR>
+class InputFilter : public tbb::filter {
+public:
+    InputFilter(SVectorStream<SVECTOR>* vs, size_t readsize = 1000) : 
+        filter(serial_out_of_order),
+        _vs(vs),
+        _readsize(readsize),
+        _read(0)
+        { }
+        
+    ~InputFilter() { }
+
+    size_t read() {
+        return _read;
+    }
+    
+private:
+    SVectorStream<SVECTOR>* _vs;
+    size_t _readsize;
+    size_t _read;
+
+    void* operator()(void*) {
+        auto data = new vector<SVECTOR*>;
+        size_t read = _vs->read(_readsize, data);
+        if (read == 0) {
+            delete data;
+            return NULL;
+        }
+        _read += data->size();
+        return data;
+    }
+};
+
+template <typename SVECTOR, typename STREAMINGEMTREE>
+class InsertFilter : public tbb::filter {
+public:
+    InsertFilter(SVectorStream<SVECTOR>* vs, STREAMINGEMTREE* emtree) :
+        filter(parallel),
+        _vs(vs),
+        _emtree(emtree)
+        { }
+    
+    ~InsertFilter() { }
+    
+private:
+    SVectorStream<SVECTOR>* _vs;
+    STREAMINGEMTREE* _emtree;
+    
+    void* operator()(void* item) {
+        auto data = (vector<SVECTOR*>*)item;
+        _emtree->insert(*data);
+        _vs->free(data);
+        delete data;
+    }
+};
 
 /**
  * The streaming version of the EM-tree algorithm does not store the
@@ -37,6 +98,18 @@ public:
         
     ~StreamingEMTree() {
         delete _root;
+    }
+
+    size_t insert(SVectorStream<T>& vs) {
+        // maximum number of readsize vector chunks that can be loaded at once
+        constexpr int maxtokens = 1024;
+        tbb::pipeline pipeline;
+        InputFilter<T> inputFilter(&vs);
+        pipeline.add_filter(inputFilter);
+        InsertFilter<T, StreamingEMTree> insertFilter(&vs, this);
+        pipeline.add_filter(insertFilter);
+        pipeline.run(maxtokens);
+        return inputFilter.read();
     }
     
     /**

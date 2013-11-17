@@ -15,7 +15,7 @@
 #include "KMeans.h"
 #include "BitMapList8.h"
 #include "StdIncludes.h"
-#include "VectorStream.h"
+#include "SVectorStream.h"
 
 #include "EMTree.h"
 #include "StreamingEMTree.h"
