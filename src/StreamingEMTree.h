@@ -72,7 +72,7 @@ public:
     
     double getRMSE() {
         double RMSE = sumSquaredError(_root);
-        int size = getObjCount();
+        uint64_t size = getObjCount();
         RMSE /= size;
         RMSE = sqrt(RMSE);
         return RMSE;

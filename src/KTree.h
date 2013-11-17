@@ -180,7 +180,7 @@ private:
 
     double RMSE() {
         double RMSE = sumSquaredError(NULL, _root);
-        int size = getObjCount();
+        uint64_t size = getObjCount();
         RMSE /= size;
         RMSE = sqrt(RMSE);
         return RMSE;
