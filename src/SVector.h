@@ -281,7 +281,7 @@ public:
     static inline int popcnt64(block_type b64) {
 #ifdef __GNUC__
         // uses POPCNT instruction if available, otherwise lookup table
-        return __builtin_popcountll();
+        return __builtin_popcountll(b64);
 #else
         block_type x(b64);
         x = x - ((x >> 1) & 0x5555555555555555ULL);
