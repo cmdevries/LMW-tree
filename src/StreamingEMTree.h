@@ -61,6 +61,7 @@ private:
         _emtree->insert(*data);
         _vs->free(data);
         delete data;
+		return NULL;
     }
 };
 
@@ -102,7 +103,7 @@ public:
 
     size_t insert(SVectorStream<T>& vs) {
         // maximum number of readsize vector chunks that can be loaded at once
-        constexpr int maxtokens = 1024;
+        const int maxtokens = 1024;
         tbb::pipeline pipeline;
         InputFilter<T> inputFilter(&vs);
         pipeline.add_filter(inputFilter);

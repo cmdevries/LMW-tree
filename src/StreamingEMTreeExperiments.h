@@ -33,9 +33,9 @@ StreamingEMTree_t* streamingEMTreeInit() {
     }
 
     // run TSVQ to build tree on sample
-    constexpr int m = 30;
-    constexpr int depth = 3;
-    constexpr int maxiter = 0;
+    const int m = 30;
+    const int depth = 3;
+    const int maxiter = 0;
     TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiter);
 
     {
@@ -55,10 +55,10 @@ StreamingEMTree_t* streamingEMTreeInit() {
 }
 
 void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
-    constexpr char docidFile[] = "data/wiki.4096.docids";
-    constexpr char signatureFile[] = "data/wiki.4096.sig";
-    constexpr size_t signatureLength = 4096;
-    constexpr size_t readSize = 1000;
+    const char docidFile[] = "data/wiki.4096.docids";
+    const char signatureFile[] = "data/wiki.4096.sig";
+    const size_t signatureLength = 4096;
+    const size_t readSize = 1000;
 
     // open files
     SVectorStream<SVector<bool>> vs(docidFile, signatureFile, signatureLength);
@@ -96,7 +96,7 @@ void streamingEMTree() {
     }
 
     // streaming EMTree
-    constexpr int maxIters = 10;
+    const int maxIters = 10;
     StreamingEMTree_t* emtree = streamingEMTreeInit();
     cout << endl << "Streaming EM-tree:" << endl;
     for (int i = 0; i < maxIters - 1; i++) {

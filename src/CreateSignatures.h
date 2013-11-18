@@ -60,9 +60,9 @@ void readSignatures(vector<SVector<bool>*> &vectors, string docidFile, string si
 }
 
 void loadWikiSignatures(vector<SVector<bool>*>& vectors, int veccount) {
-    constexpr char docidFile[] = "data/wiki.4096.docids";
-    constexpr char signatureFile[] = "data/wiki.4096.sig";
-    constexpr size_t signatureLength = 4096;
+    const char docidFile[] = "data/wiki.4096.docids";
+    const char signatureFile[] = "data/wiki.4096.sig";
+    const size_t signatureLength = 4096;
     readSignatures(vectors, docidFile, signatureFile, signatureLength, veccount);
 }
 

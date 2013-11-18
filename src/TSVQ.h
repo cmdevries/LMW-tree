@@ -4,10 +4,7 @@
 #include "StdIncludes.h"
 
 #include "Node.h"
-#include "threadpool.hpp"
-#include "threadpool/size_policies.hpp"
 
-using namespace boost::threadpool;
 
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class TSVQ {

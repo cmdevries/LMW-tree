@@ -4,10 +4,7 @@
 #include "StdIncludes.h"
 
 #include "Node.h"
-#include "threadpool.hpp"
-#include "threadpool/size_policies.hpp"
 
-using namespace boost::threadpool;
 
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class EMTree {
@@ -30,10 +27,6 @@ private:
     // Weights for prototype function (we don't have to use these)
     vector<int> weights;
 
-    //pool _tPool;
-
-    //boost::threadpool::pool pool;
-
 public:
 
     EMTree(int order) {
@@ -41,15 +34,6 @@ public:
         _root = new Node<T>(); // initial root is a leaf
         _clusterer.setNumClusters(_m);
         _clusterer.setMaxIters(1);
-        //_tp = pool::::create_pool(4); 
-        //pool::size_policy_type::
-        //_tPool.
-
-        //_tPool.size_controller().resize(4);
-
-        //size_controller_type sc = pool.size_controller();
-
-        //size_controller_type sc = _tp.
     }
     
     EMTree(Node<T>* root) {
@@ -118,9 +102,8 @@ public:
 
     void seed(Node<T>* current, int depth) {
 
+		/*
         //cout << "\n\nSeeding ... " << current->size();
-
-        pool _tPool(2);
 
         Node<T> *child;
 
@@ -184,6 +167,7 @@ public:
             }
 
         }
+		*/
     }
 
     void EMStep() {
@@ -271,18 +255,6 @@ public:
             rebuildInternal(_root, depth);
         }
     }
-
-    /*
-void add(T *obj) {
-            //std::cout << "\nAdding object ... ";
-
-            SplitResult<T> result = pushDown(_root, obj);
-    if (result.isSplit) {
-                    _root = new Node<T>();
-                    _root->add(result._key1, result._child1);
-                    _root->add(result._key2, result._child2);
-    }
-}*/
 
     double getRMSE() {
         return RMSE();
@@ -488,148 +460,6 @@ private:
         }
     }
     
-
-    /*
-SplitResult<T> pushDown(Node<T> *n, T *vec) {
-
-            //std::cout << "\n\tPushing down ...";
-
-            SplitResult<T> result;
-		
-            if (n->isLeaf()) {
-                    if (n->size() >= _m)  {
-            // split this node and pass new node to parent to insert
-                            result = splitLeafNode(n, vec);
-        } else {
-                            n->add(vec);  // Finished
-        }
-    } else { // It is an internal node.
-        // recurse via nearest neighbour cluster
-
-                    vector<T*>& keys = n->getKeys();
-                    vector<Node<T>*>& children = n->getChildren();
-
-                    size_t nearest = nearestChild(vec, keys);
-
-        T *nearestKey = keys[nearest];
-        Node<T> *nearestChild = children[nearest];
-
-                    result = pushDown(nearestChild, vec);
-			            
-        if (result.isSplit) { // if there was a split
-                  					
-                            updatePrototype(result._child1, result._key1);
-                            updatePrototype(result._child2, result._key2);
-
-            // add new node
-            if (n->size() >= _m) {
-                // split this node and pass new node to parent to insert
-                result = splitInternalNode(n, result._child2, result._key2);
-            } else {
-                // insert new entry
-                n->add(result._key2, result._child2);
-                result.isSplit = false;
-            }
-        }
-        else {
-                            updatePrototype(nearestChild, nearestKey);
-        }
-    }
-
-    return result;
-}
-
-
-    // Perform a binary split of the child node
-    SplitResult<T> splitInternalNode(Node<T>* parent, Node<T>* child, T* obj) {
-
-            //cout << "\nSplitting internal node ...";
-
-            SplitResult<T> result;
-
-            // Create a 2nd node
-            Node<T>* node2 = new Node<T>();
-
-            // Copy child nodes into a temp storage vector
-		
-            tempKeys = parent->getKeys();
-            tempKeys.push_back(obj);
-		
-            tempChildren = parent->getChildren();
-            tempChildren.push_back(child);
-				
-            // DetachRemove children from child node		
-            parent->clearKeysAndChildren();
-
-            // At this point we have 2 clear nodes: "parent" node (node 1) and "node2"
-
-            // Cluster keys into 2 groups
-            _clusterer.setNumClusters(2);
-            //_clusterer.cluster(tempKeys);
-            vector<Cluster<T>*>& clusters = _clusterer.cluster(tempKeys);
-				
-            // Get nearest centroids after clustering
-            tempNearCentroids = _clusterer.getNearestCentroids();
-
-            for (int i=0; i<tempNearCentroids.size(); i++) {
-                    if (tempNearCentroids[i]==0) parent->add(tempKeys[i], tempChildren[i]);			
-                    else node2->add(tempKeys[i], tempChildren[i]);
-            }
-
-            // Now make our split result		
-            result.isSplit = true;
-            result._child1 = parent;
-            result._child2 = node2;
-            result._key1 = clusters[0]->getCentroid(); 
-            result._key2 = clusters[1]->getCentroid();
-
-            return result;
-    }
-
-
-    // Perform a binary split of the child node
-    SplitResult<T> splitLeafNode(Node<T>* child, T* obj) {
-
-            //cout << "\nSplitting leaf node ...";
-
-            SplitResult<T> result;
-
-            // Create a 2nd node
-            Node<T>* node2 = new Node<T>();
-
-            // Copy child nodes into a temp storage vector
-		
-            tempKeys = child->getKeys();
-            tempKeys.push_back(obj);
-
-            // DetachRemove children from child node		
-            child->clearKeysAndChildren();
-
-            // At this point we have 2 clear nodes: "child" node (node 1) and "node2"
-
-            // Cluster keys into 2 groups
-            _clusterer.setNumClusters(2);
-            //_clusterer.cluster(tempKeys);
-            vector<Cluster<T>*>& clusters = _clusterer.cluster(tempKeys);
-				
-            // Get nearest centroids after clustering
-            tempNearCentroids = _clusterer.getNearestCentroids();
-
-            for (int i=0; i<tempNearCentroids.size(); i++) {
-                    if (tempNearCentroids[i]==0) child->add(tempKeys[i]);
-                    else node2->add(tempKeys[i]);
-            }
-
-            // Now make our split result		
-            result.isSplit = true;
-            result._child1 = child;
-            result._child2 = node2;
-            result._key1 = clusters[0]->getCentroid(); 
-            result._key2 = clusters[1]->getCentroid();
-
-            return result;
-    }
-     */
 
     // Update the protype parentKey
 
