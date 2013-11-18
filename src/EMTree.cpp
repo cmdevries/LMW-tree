@@ -1,9 +1,6 @@
 // EMTree.cpp : Defines the entry point for the console application.
 //
 
-// For threadpool
-#define TIME_UTC_ TIME_UTC
-
 #include "Funcs.h"
 #include "SVector.h"
 #include "Cluster.h"
