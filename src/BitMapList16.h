@@ -51,7 +51,7 @@ public:
 		}
 	}
 
-	void add( unsigned short idx, int* counts, int weight ) {
+	void add( unsigned short idx, int* counts, int weight ) const {
 		//std::cout << "\n--  " << idx << " ... " << entries[idx].numBits;
 
 		for (int i=0; i<entries[idx].numBits; i++) {
@@ -59,7 +59,7 @@ public:
 		}
 	}
 
-	inline void add1( unsigned short idx, int* counts ) {
+	inline void add1( unsigned short idx, int* counts ) const {
 		//std::cout << "\n--  " << idx << " ... " << entries[idx].numBits;
 
 		int num = entries[idx].numBits;

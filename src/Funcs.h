@@ -7,10 +7,14 @@
 #include "BitMapList8.h"
 #include "BitMapList16.h"
 
+#include "tbb/task_scheduler_init.h"
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+
 template <typename T>
 struct euclideanDistance {
 
-	float operator()(T *t1, T *t2) {
+	float operator()(T *t1, T *t2) const {
 	
 		typename T::iterator it1 = t1->begin();
 		typename T::iterator it2 = t2->begin();
@@ -31,7 +35,7 @@ struct euclideanDistance {
 template <typename T>
 struct euclideanDistanceSq {
 
-	float operator()(T *t1, T *t2) {
+	float operator()(T *t1, T *t2) const {
 	
 		typename T::iterator it1 = t1->begin();
 		typename T::iterator it2 = t2->begin();
@@ -53,7 +57,7 @@ struct euclideanDistanceSq {
 template <typename T>
 struct meanPrototype {
 
-	void operator()(T *t1, vector<T*> &objs, vector<int> &weights) {
+	void operator()(T *t1, vector<T*> &objs, vector<int> &weights) const {
 	
 		float total = 0.0f;
 
@@ -78,11 +82,6 @@ struct meanPrototype {
 
 
 struct meanBitPrototype {
-	
-	block_type *data;
-	int vecSize;
-	int dataSize;
-	int numBlocks;
 
 	// We define this variable as a member variable instead of
 	// creating it new each time operator() is called.
@@ -97,12 +96,13 @@ struct meanBitPrototype {
 		delete[] bitCountPerDimension;
 	}
 
-	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, vector<int> &weights) {
+	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
+		vector<int> &weights) const {
 
-		vecSize = t1->size(); 
-		data = t1->getData();
-		dataSize = sizeof(data[0]) * 8;
-		numBlocks = t1->getNumBlocks();
+		block_type *data = t1->getData();;
+		int vecSize = t1->size();
+		int dataSize = sizeof(data[0]) * 8;
+		int numBlocks = t1->getNumBlocks();
 
 		t1->setAllBlocks(0);
 
@@ -176,17 +176,15 @@ struct meanBitPrototype2 {
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
-	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, vector<int> &weights) {
+	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
+		vector<int> &weights) const {
 
-		//std::cout << "\nComputing mean ...";
+		unsigned short val;
 
-		//float total = 0.0f;
-		
-		vecSize = t1->size();
-		data = t1->getData();
-		dataSize = sizeof(data[0]) * 8;
-		numBlocks = t1->getNumBlocks();
-		//numSteps = dataSize/16; 
+		block_type *data = t1->getData();
+		int vecSize = t1->size();
+		int dataSize = sizeof(data[0]) * 8;
+		int numBlocks = t1->getNumBlocks();
 
 		t1->setAllBlocks(0);
 				
@@ -225,22 +223,7 @@ struct meanBitPrototype2 {
 			}
 			halfCount /= 2;
 		}
-		else {/*
-			for (size_t t = 0; t < objs.size(); t++) {
-				
-				data = objs[t]->getData();
-				pos = bitCountPerDimension;
-
-				for (int i=0; i<numBlocks; i++) {	
-					val = data[i];
-					for (int j=0; j<dataSize; j+=16) {							
-						val = (data[i] >> j) & 65535LL;
-						//bMap.add(val, pos, 1);
-						bMap.add1(val, pos);
-						pos+=16;
-					}
-				}	
-			}*/
+		else {
 			for (size_t t = 0; t < objs.size(); t++) {
 				
 				data = objs[t]->getData();
@@ -285,14 +268,6 @@ struct meanBitPrototype2 {
 struct meanBitPrototype8 {
 	
 	BitMapList8 bMap;
-		
-	block_type *data;
-	//block_type block;
-	int vecSize;
-	int dataSize;
-	int numBlocks;
-	//int numSteps;
-	unsigned short val;
 
 	// We define this variable as a member variable instead of
 	// creating it new each time operator() is called.
@@ -309,22 +284,18 @@ struct meanBitPrototype8 {
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
-	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, vector<int> &weights) {
+	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
+		vector<int> &weights) const {
 
-		//std::cout << "\nComputing mean ...";
+		unsigned short val;
 
-		//float total = 0.0f;
-		
-		vecSize = t1->size();
-		data = t1->getData();
-		dataSize = sizeof(data[0]) * 8;
-		numBlocks = t1->getNumBlocks();
-		//numSteps = dataSize/16; 
+		block_type *data = t1->getData();
+		int vecSize = t1->size();
+		int dataSize = sizeof(data[0]) * 8;
+		int numBlocks = t1->getNumBlocks();
 
 		t1->setAllBlocks(0);
 				
-		//memset(bitCountPerDimension, 0, t1->size());
-		// 
 		memset(bitCountPerDimension, 0, vecSize*sizeof(int));
 
 		int halfCount = 0;
@@ -418,7 +389,7 @@ struct meanBitPrototype8 {
 
 struct hammingDistance {
 
-	float operator()(SVector<bool> *v1, SVector<bool> *v2) {
+	float operator()(SVector<bool> *v1, SVector<bool> *v2) const {
 	
 		return SVector<bool>::hammingDistance( *v1,  *v2);
 
@@ -426,17 +397,96 @@ struct hammingDistance {
 };
 
 
+//---------------------------------
+// Function object for use with TBB
 
-template <typename T, typename R>
-struct taskT {
+template <typename T, typename DTYPE>
+struct VecToCentroid {
 
-	static int run(T a, R b) {
-		logMsg("Start job4", a+b);
-		return (int)(a + b);
+	vector<T*>& _data;
+	vector<T*>& _centroids;
+	vector<size_t>& _nearestCentroid;
+
+	DTYPE _distF;
+	bool *_converged;
+
+public:
+
+	void operator()(const tbb::blocked_range<size_t>& r) const {
+
+		int nearest;
+
+		for (size_t i = r.begin(); i != r.end(); i++) {
+			nearest = nearestObj(_data[i]);
+			if (nearest != _nearestCentroid[i]) {
+				*_converged = false;
+			}
+			_nearestCentroid[i] = nearest;
+		}
+	}
+
+	size_t nearestObj(T *obj) const {
+
+		size_t nearest = 0;
+		float dist;
+		float nearestDistance = _distF(obj, _centroids[0]);
+
+		for (size_t i = 1; i < _centroids.size(); ++i) {
+			dist = _distF(obj, _centroids[i]);
+			if (dist < nearestDistance) {
+				nearestDistance = dist;
+				nearest = i;
+			}
+		}
+
+		return nearest;
+	}
+
+	VecToCentroid(vector<T*>& centroids, vector<T*>& data, vector<size_t>& nearestCentroid, bool *converged) :
+		_centroids(centroids),
+		_data(data),
+		_nearestCentroid(nearestCentroid),
+		_converged(converged)
+	{
+
+	}
+};
+
+
+template <typename T, typename PTYPE>
+struct UpdateCentroid {
+
+	vector<int>& _weights;
+	// Should this be a reference?
+	vector<Cluster<T>*> _clusters;
+
+	PTYPE _protoF;
+
+public:
+
+	void operator()(const tbb::blocked_range<size_t>& r) const {
+
+		Cluster<T>* c;
+		int count;
+
+		for (size_t i = r.begin(); i != r.end(); i++) {
+			c = _clusters[i];
+			count = (int)(c->size());
+
+			if (count > 0) {
+				_protoF(c->getCentroid(), c->getNearestList(), _weights);
+			}
+		}
+	}
+
+	UpdateCentroid(vector<Cluster<T>*> clusters, vector<int>& weights) : 
+		_clusters(clusters), 
+		_weights(weights)
+	{
+
 	}
 
 };
-
 
 
 

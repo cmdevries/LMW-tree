@@ -19,29 +19,21 @@ private:
     // enforce the number of clusters required
     // if less than k clusters are produced, shuffle vectors randomly and split into k cluster
     bool _enforceNumClusters = false;
-    
-    // The dimension of the vectors.
-    //int _dim;
 
     // present number of iterations
-    int _iterCount;
+    int _iterCount = 0;
 
     // maximum number of iterations
     // -1 - run until complete convergence
     // 0 - only assign nearest neighbors after seeding
     // >= 1 - perform this many iterations
-    int _maxIters;
+    int _maxIters = 100;
 
     // How many clusters should be found? i.e. k
-    int _numClusters;
-
-    // The centroids of the clusters.
-    //vector<T*> _centroids;
+    int _numClusters = 0;
 
     vector<T*> _centroids;
-
     vector<Cluster<T>*> _clusters;
-
     vector<Cluster<T>*> _finalClusters;
 
     // The centroid index for each vector. Aligned with vectors member variable.
@@ -50,21 +42,28 @@ private:
     // Weights for prototype function (we don't have to use these)
     vector<int> weights;
 
+	// Residual for convergence
+	float _eps = 0.00001f;
+
 public:
 
     //KMeans(Seeder *seeder, int numClusters) {
 
     KMeans() {
         _seeder = new SeederType();
-        _numClusters = 0;
-        _maxIters = 100;
     }
 
-    KMeans(int numClusters) {
+	KMeans(int numClusters) : _numClusters(numClusters) {
         _seeder = new SeederType();
-        _numClusters = numClusters;
-        _maxIters = 100;
     }
+
+	KMeans(int numClusters, float eps) : 
+		_numClusters(numClusters), 
+		_eps(eps) 
+	{
+		_seeder = new SeederType();
+		_maxIters = 100;
+	}
 
     ~KMeans() {
         // Need to clean up any created cluster objects
@@ -74,11 +73,6 @@ public:
     vector<size_t>& getNearestCentroids() {
         return _nearestCentroid;
     }
-
-    /*
-    void setSeeder(Seeder *seeder) {
-            _seeder = seeder;
-    }*/
 
     void setNumClusters(size_t numClusters) {
         _numClusters = numClusters;
@@ -224,20 +218,37 @@ private:
      *                 convergence
      */
     bool vectorsToNearestCentroid(vector<T*> &data) {
+
+		size_t nearest;
+
         // Clear the nearest vectors in each cluster
         for (Cluster<T> *c : _clusters) {
             c->clearNearest();
         }
         bool converged = true;
-        for (size_t i = 0; i < data.size(); ++i) {
-            // Find centroid closest to current vector.
-            size_t nearest = nearestObj(data[i], _centroids);
-            if (nearest != _nearestCentroid[i]) {
-                converged = false;
-            }
-            _nearestCentroid[i] = nearest;
-            _clusters[nearest]->addNearest(data[i]);
-        }
+		size_t dataCount = data.size();
+
+		//--------------
+		// Parallel
+
+		VecToCentroid<T, DistanceType> vc(_centroids, data, _nearestCentroid, &converged);
+
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, dataCount, 1000), vc);
+
+		//--------------
+		// Serial
+
+		// Clear the nearest vectors in each cluster
+		for (Cluster<T> *c : _clusters) {
+			c->clearNearest();
+		}
+
+		// Accumlate into clusters
+		for (size_t i = 0; i < dataCount; i++) {
+			nearest = _nearestCentroid[i];
+			_clusters[nearest]->addNearest(data[i]);
+		}
+
         return converged;
     }
 
@@ -248,13 +259,14 @@ private:
      * Post: centroids has been updated with new vector data
      */
     void recalculateCentroids(vector<T*> &data) {
-        // Apply prototype function
-        for (Cluster<T> *c : _clusters) {
-            int count = (int) (c->size());
-            if (count > 0) {
-                _protoF(c->getCentroid(), c->getNearestList(), weights);
-            }
-        }
+
+		//--------------
+		// Parallel
+
+		UpdateCentroid<T, ProtoType> uc(_clusters, weights);
+
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 2), uc);
+
     }
 };
 

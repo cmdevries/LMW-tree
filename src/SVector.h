@@ -17,6 +17,7 @@ protected:
 
     T* _data;
     size_t _length;
+	string _id;
 
 public:
 
@@ -55,6 +56,14 @@ public:
     T& at(size_t i) {
         return _data[i];
     }
+
+	void setID(const string& id) {
+		_id = id;
+	}
+
+	const string& getID() {
+		return _id;
+	}
 
     void set(size_t i, T val) {
         _data[i] = val;
