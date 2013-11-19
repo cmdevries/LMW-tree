@@ -5,6 +5,7 @@
 #include "Clusterer.h"
 #include "Seeder.h"
 #include "StdIncludes.h"
+#include "tbb/atomic.h"
 
 template <typename T, typename SeederType, typename DistanceType, typename ProtoType>
 class KMeans : public Clusterer<T> {
@@ -40,10 +41,13 @@ private:
     vector<size_t> _nearestCentroid;
 
     // Weights for prototype function (we don't have to use these)
-    vector<int> weights;
+    vector<int> _weights;
 
-	// Residual for convergence
-	float _eps = 0.00001f;
+    // Residual for convergence
+    float _eps = 0.00001f;
+    
+    // has the clustering converged
+    bool _converged;
 
 public:
 
@@ -177,26 +181,22 @@ private:
         }
 
         // Repeat until convergence.
-        bool converged = false;
+        _converged = false;
         _iterCount = 1;
-        while (!converged) {
-            converged = vectorsToNearestCentroid(data);
+        while (!_converged) {
+            vectorsToNearestCentroid(data);
             recalculateCentroids(data);
             _iterCount++;
             if (_maxIters != -1 && _iterCount >= _maxIters) {
                 break;
             }
-
         }
-        //cout << "iterations = " << _iterCount << endl;
     }
 
     size_t nearestObj(T *obj, vector<T*> &others) {
-
         size_t nearest = 0;
         float dist = 0;
         float nearestDistance = _distF(obj, others[0]);
-
         for (size_t i = 1; i < others.size(); ++i) {
             dist = _distF(obj, others[i]);
             if (dist < nearestDistance) {
@@ -204,10 +204,32 @@ private:
                 nearest = i;
             }
         }
-
         return nearest;
     }
 
+    void vectorToNearestCentroid(size_t i, vector<T*>& data) {
+        size_t nearest = nearestObj(data[i], _centroids);
+        if (nearest != _nearestCentroid[i]) {
+            _converged = false;
+        }
+        _nearestCentroid[i] = nearest;
+    }
+    
+    class VecToCentroid {
+    public:
+        VecToCentroid(KMeans* kmeans, vector<T*>& data) : _kmeans(kmeans), _data(data) { }
+
+        void operator()(const tbb::blocked_range<size_t>& r) const {
+            for (size_t i = r.begin(); i != r.end(); i++) {
+                _kmeans->vectorToNearestCentroid(i, _data);
+            }
+        }
+        
+    private:
+        KMeans* _kmeans;
+        vector<T*>& _data;
+    };
+    
     /**
      * Assign vectors to nearest centroid.
      * Pre: seedCentroids() OR recalculateCentroids() has been called
@@ -217,41 +239,52 @@ private:
      * @return boolean indicating if there were any changes, i.e. was there
      *                 convergence
      */
-    bool vectorsToNearestCentroid(vector<T*> &data) {
-
-		size_t nearest;
-
+    void vectorsToNearestCentroid(vector<T*> &data) {
         // Clear the nearest vectors in each cluster
         for (Cluster<T> *c : _clusters) {
             c->clearNearest();
         }
-        bool converged = true;
-		size_t dataCount = data.size();
+        _converged = true;
 
-		//--------------
-		// Parallel
+        // Parallel
+        VecToCentroid vc(this, data);
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, data.size(), 1000), vc);
+        tbb::atomic_fence(); // make sure all data is visible
 
-		VecToCentroid<T, DistanceType> vc(_centroids, data, _nearestCentroid, &converged);
-
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, dataCount, 1000), vc);
-
-		//--------------
-		// Serial
-
-		// Clear the nearest vectors in each cluster
-		for (Cluster<T> *c : _clusters) {
-			c->clearNearest();
-		}
-
-		// Accumlate into clusters
-		for (size_t i = 0; i < dataCount; i++) {
-			nearest = _nearestCentroid[i];
-			_clusters[nearest]->addNearest(data[i]);
-		}
-
-        return converged;
+        // Serial
+        // Clear the nearest vectors in each cluster
+        for (Cluster<T> *c : _clusters) {
+            c->clearNearest();
+        }
+        // Accumlate into clusters
+        for (size_t i = 0; i < data.size(); i++) {
+            size_t nearest = _nearestCentroid[i];
+            _clusters[nearest]->addNearest(data[i]);
+        }
     }
 
+    void recalculateCentroid(size_t i) {
+        Cluster<T>* c = _clusters[i];
+        if (c->size() > 0) {
+            _protoF(c->getCentroid(), c->getNearestList(), _weights);
+        }
+    }
+
+    class RecalculateCentroid {
+    public:
+        RecalculateCentroid(KMeans* kmeans) : _kmeans(kmeans) {
+        }
+
+        void operator()(const tbb::blocked_range<size_t>& r) const {
+            for (size_t i = r.begin(); i != r.end(); i++) {
+                _kmeans->recalculateCentroid(i);
+            }
+        }
+
+    private:
+        KMeans* _kmeans;
+    };
+    
     /**
      * Recalculate centroids after vectors have been moved to there nearest
      * centroid.
@@ -259,14 +292,9 @@ private:
      * Post: centroids has been updated with new vector data
      */
     void recalculateCentroids(vector<T*> &data) {
-
-		//--------------
-		// Parallel
-
-		UpdateCentroid<T, ProtoType> uc(_clusters, weights);
-
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 2), uc);
-
+        RecalculateCentroid recalculate(this);
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 2), recalculate);
+        tbb::atomic_fence(); // make sure all data is visible
     }
 };
 

@@ -82,23 +82,16 @@ struct meanPrototype {
 
 
 struct meanBitPrototype {
-
-	// We define this variable as a member variable instead of
-	// creating it new each time operator() is called.
-	// 65536 is an arbitrary size.
-	int *bitCountPerDimension;
-
 	meanBitPrototype() {
-		bitCountPerDimension = new int[65536];
 	}
 
 	~meanBitPrototype() {
-		delete[] bitCountPerDimension;
 	}
 
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
 
+            int bitCountPerDimension[65536];
 		block_type *data = t1->getData();;
 		int vecSize = t1->size();
 		int dataSize = sizeof(data[0]) * 8;
@@ -161,24 +154,18 @@ struct meanBitPrototype2 {
 	//int numSteps;
 	unsigned short val;
 
-	// We define this variable as a member variable instead of
-	// creating it new each time operator() is called.
-	// 65536 is an arbitrary size.
-	int *bitCountPerDimension;
-
 	meanBitPrototype2() {
-		bitCountPerDimension = new int[65536];
 		bMap.initialise();
 	}
 
 	~meanBitPrototype2() {
-		delete[] bitCountPerDimension;
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
 
+            int bitCountPerDimension[65536];
 		unsigned short val;
 
 		block_type *data = t1->getData();
@@ -269,24 +256,18 @@ struct meanBitPrototype8 {
 	
 	BitMapList8 bMap;
 
-	// We define this variable as a member variable instead of
-	// creating it new each time operator() is called.
-	// 65536 is an arbitrary size.
-	int *bitCountPerDimension;
-
 	meanBitPrototype8() {
-		bitCountPerDimension = new int[65536];
 		bMap.initialise();
 	}
 
 	~meanBitPrototype8() {
-		delete[] bitCountPerDimension;
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
 
+            int bitCountPerDimension[65536];
 		unsigned short val;
 
 		block_type *data = t1->getData();
@@ -395,101 +376,6 @@ struct hammingDistance {
 
 	}
 };
-
-
-//---------------------------------
-// Function object for use with TBB
-
-template <typename T, typename DTYPE>
-struct VecToCentroid {
-
-	vector<T*>& _data;
-	vector<T*>& _centroids;
-	vector<size_t>& _nearestCentroid;
-
-	DTYPE _distF;
-	bool *_converged;
-
-public:
-
-	void operator()(const tbb::blocked_range<size_t>& r) const {
-
-		int nearest;
-
-		for (size_t i = r.begin(); i != r.end(); i++) {
-			nearest = nearestObj(_data[i]);
-			if (nearest != _nearestCentroid[i]) {
-				*_converged = false;
-			}
-			_nearestCentroid[i] = nearest;
-		}
-	}
-
-	size_t nearestObj(T *obj) const {
-
-		size_t nearest = 0;
-		float dist;
-		float nearestDistance = _distF(obj, _centroids[0]);
-
-		for (size_t i = 1; i < _centroids.size(); ++i) {
-			dist = _distF(obj, _centroids[i]);
-			if (dist < nearestDistance) {
-				nearestDistance = dist;
-				nearest = i;
-			}
-		}
-
-		return nearest;
-	}
-
-	VecToCentroid(vector<T*>& centroids, vector<T*>& data, vector<size_t>& nearestCentroid, bool *converged) :
-		_centroids(centroids),
-		_data(data),
-		_nearestCentroid(nearestCentroid),
-		_converged(converged)
-	{
-
-	}
-};
-
-
-template <typename T, typename PTYPE>
-struct UpdateCentroid {
-
-	vector<int>& _weights;
-	// Should this be a reference?
-	vector<Cluster<T>*> _clusters;
-
-	PTYPE _protoF;
-
-public:
-
-	void operator()(const tbb::blocked_range<size_t>& r) const {
-
-		Cluster<T>* c;
-		int count;
-
-		for (size_t i = r.begin(); i != r.end(); i++) {
-			c = _clusters[i];
-			count = (int)(c->size());
-
-			if (count > 0) {
-				_protoF(c->getCentroid(), c->getNearestList(), _weights);
-			}
-		}
-	}
-
-	UpdateCentroid(vector<Cluster<T>*> clusters, vector<int>& weights) : 
-		_clusters(clusters), 
-		_weights(weights)
-	{
-
-	}
-
-};
-
-
-
 
 #endif
 
