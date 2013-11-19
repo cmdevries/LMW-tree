@@ -127,9 +127,8 @@ public:
     }
     
     void update() {
-        for (int depth = getMaxLevelCount(); depth >= 1; --depth) {
-            update(_root, depth);
-        }        
+        update(_root);
+        clearAccumulators(_root);
     }
     
     int getMaxLevelCount() {
@@ -214,61 +213,78 @@ private:
         return pruned;
     }
     
+    void gatherAccumulators(Node<AccumulatorKey>* node, ACCUMULATOR* total,
+            uint64_t* totalCount) {
+        if (node->isLeaf()) {
+            for (auto accumulatorKey : node->getKeys()) {
+                auto accumulator = accumulatorKey->accumulator;
+                for (size_t i = 0; i < accumulator->size(); i++) {
+                    (*total)[i] += (*accumulator)[i];
+                }
+                *totalCount += accumulatorKey->count;
+            }
+        } else {
+            for (auto child : node->getChildren()) {
+                gatherAccumulators(child, total, totalCount);
+            }
+        }
+    }
+    
     /**
      * TODO(cdevries): Make it work for something other than bitvectors. It needs
      * to be parameterized, for example, with float vectors, a mean is taken.
      */
-    void updatePrototypeFromAccumulators(AccumulatorKey* accumulatorKey) {
+    static void updatePrototypeFromAccumulator(T* key, ACCUMULATOR* accumulator,
+            uint64_t count) {
         // calculate new key based on accumulator
-        T* key = accumulatorKey->key;
-        ACCUMULATOR* accumulator = accumulatorKey->accumulator;
-        int halfCount = accumulatorKey->count / 2;
         key->setAllBlocks(0);
         for (size_t i = 0; i < key->size(); i++) {
-            if ((*accumulator)[i] > halfCount) {
+            if ((*accumulator)[i] > (count / 2)) {
                 key->set(i);
             }
         }
-
-        // reset accumulators for next insert
-        accumulatorKey->sumSquaredError = 0;
-        accumulatorKey->accumulator->setAll(0);
-        accumulatorKey->count = 0;
     }
     
-    void updatePrototype(Node<AccumulatorKey>* childNode, T* parentKey) {
-        vector<int> weights;
-        if (!childNode->isLeaf()) {
-            for (auto child : childNode->getChildren()) {
-                weights.push_back(objCount(child));
+    void update(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            // leaves flatten accumulators in node
+            for (auto accumulatorKey : node->getKeys()) {
+                updatePrototypeFromAccumulator(accumulatorKey->key, 
+                        accumulatorKey->accumulator, accumulatorKey->count);
+            }
+        } else {
+            // internal nodes must gather accumulators from leaves
+            size_t dimensions = node->getKey(0)->key->size();
+            for (size_t i = 0; i < node->size(); i++) {
+                auto accumulatorKey = node->getKey(i);
+                T* key = accumulatorKey->key;
+                auto child = node->getChild(i);
+                ACCUMULATOR total(dimensions);
+                total.setAll(0);
+                uint64_t totalCount = 0;
+                gatherAccumulators(child, &total, &totalCount);
+                updatePrototypeFromAccumulator(key, &total, totalCount);
+            }
+            for (auto child : node->getChildren()) {
+                update(child);
             }
         }
-        vector<T*> childKeys;
-        for (auto accumulatorKey : childNode->getKeys()) {
-            childKeys.push_back(accumulatorKey->key);
-        }
-        _prototype(parentKey, childKeys, weights);
-    }    
-    
-    void update(Node<AccumulatorKey>* node, int depth) {
-        if (depth == 1) {
-            if (node->isLeaf()) {
-                for (auto accumulatorKey : node->getKeys()) {
-                    updatePrototypeFromAccumulators(accumulatorKey);
-                }
-            } else {
-                auto children = node->getChildren();
-                auto keys = node->getKeys();
-                for (int i = 0; i < children.size(); i++) {
-                    updatePrototype(children[i], keys[i]->key);
-                }
+    }
+
+    void clearAccumulators(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            for (auto accumulatorKey : node->getKeys()) {
+                accumulatorKey->sumSquaredError = 0;
+                accumulatorKey->accumulator->setAll(0);
+                accumulatorKey->count = 0;
             }
         } else {
             for (auto child : node->getChildren()) {
-                update(child, depth - 1);
-            }
+                clearAccumulators(child);
+            }            
         }
     }
+   
         
     void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
