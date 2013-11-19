@@ -268,9 +268,9 @@ void testHistogram(vector<SVector<bool>*>& vectors) {
 int main(int argc, char** argv) {
     std::srand(std::time(0));
     
-//    streamingEMTree();
+    streamingEMTree();
 
-
+/*
     if (false) {
         clueweb();
     } else {
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
             cout << "error - vectors or subset empty" << endl;
         }
     }
- 
+ */
     
     return EXIT_SUCCESS;
 }
