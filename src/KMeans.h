@@ -164,13 +164,14 @@ private:
             _clusters.push_back(new Cluster<T>(c));
         }
 
-        //cout << "\nAfter seeding there are " << _clusters.size() << " clusters.";
+        cout << "\nAfter seeding there are " << _clusters.size() << " clusters.";
 
         // First iteration
         vectorsToNearestCentroid(data);
         if (_maxIters == 0) {
             return;
         }
+
         recalculateCentroids(data);
         if (_maxIters == 1) {
             return;
@@ -180,6 +181,7 @@ private:
         bool converged = false;
         _iterCount = 1;
         while (!converged) {
+			cout << endl << "Iter count = " << _iterCount;
             converged = vectorsToNearestCentroid(data);
             recalculateCentroids(data);
             _iterCount++;
@@ -219,12 +221,15 @@ private:
      */
     bool vectorsToNearestCentroid(vector<T*> &data) {
 
+		cout << endl << "Vectors to nearest centroid ...";
+
 		size_t nearest;
 
         // Clear the nearest vectors in each cluster
         for (Cluster<T> *c : _clusters) {
             c->clearNearest();
         }
+
         bool converged = true;
 		size_t dataCount = data.size();
 
@@ -238,10 +243,11 @@ private:
 		//--------------
 		// Serial
 
+		/*
 		// Clear the nearest vectors in each cluster
 		for (Cluster<T> *c : _clusters) {
 			c->clearNearest();
-		}
+		}*/
 
 		// Accumlate into clusters
 		for (size_t i = 0; i < dataCount; i++) {
@@ -260,6 +266,8 @@ private:
      */
     void recalculateCentroids(vector<T*> &data) {
 
+		cout << endl << "Recalculate centroids ...";
+
 		//--------------
 		// Parallel
 
@@ -268,6 +276,7 @@ private:
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 2), uc);
 
     }
+
 };
 
 

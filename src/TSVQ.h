@@ -18,9 +18,8 @@ private:
     // The root of the tree.
     Node<T> *_root;
 
+	DistanceType _distF;
     ClustererType _clusterer;
-    DistanceType _distF;
-    ProtoType _protoF;
 
 public:
     TSVQ(int order, int depth, int maxiters) : _m(order), _depth(depth),
@@ -68,6 +67,10 @@ public:
     void cluster(vector<T*> &data) {
         // make the root a leaf containing all data
         _root->addAll(data);
+		
+		//ClustererTask& a = *new(task::allocate_root()) ClustererTask(n, &sum);
+		//task::spawn_root_and_wait(a);
+
         cluster(_root, _depth);
     }
 

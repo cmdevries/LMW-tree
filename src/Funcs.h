@@ -458,7 +458,7 @@ struct UpdateCentroid {
 
 	vector<int>& _weights;
 	// Should this be a reference?
-	vector<Cluster<T>*> _clusters;
+	vector<Cluster<T>*> &_clusters;
 
 	PTYPE _protoF;
 
@@ -479,7 +479,7 @@ public:
 		}
 	}
 
-	UpdateCentroid(vector<Cluster<T>*> clusters, vector<int>& weights) : 
+	UpdateCentroid(vector<Cluster<T>*> &clusters, vector<int>& weights) : 
 		_clusters(clusters), 
 		_weights(weights)
 	{
@@ -488,6 +488,92 @@ public:
 
 };
 
+/*
+template <typename VEC_TYPE, typename CLUSTERER_TYPE>
+class ClustererTask : public tbb::task {
+
+public:
+	
+	const Node<VEC_TYPE> *_current;
+	const int _m;
+	const int _depth;
+	const int _maxIters;
+
+	ClustererTask(Node<VEC_TYPE>* current, int order, int depth, int maxiters) : 
+		_current(current),
+		_m(order), 
+		_depth(depth),
+		_maxIters(maxiters)
+	{
+	
+	}
+
+
+	task* execute() {      // Overrides virtual function task::execute
+
+		ClustererType _clusterer;
+		_clusterer.setNumClusters(_m);
+		_clusterer.setMaxIters(_maxIters);
+		
+		vector<Cluster<T>*> clusters = _clusterer.cluster(_current->getKeys());
+		_current->clearKeysAndChildren();
+		
+		for (Cluster<T>* c : clusters) {
+			Node<T>* child = new Node<T>();
+			child->addAll(c->getNearestList());
+			current->add(c->getCentroid(), child);
+		}
+
+		// All the compute tasks in this part of the tree
+		vector<ClustererTask*> tasks;
+
+		if (depth > 1) {
+			
+			for (Node<T>* n : current->getChildren()) {
+				
+				tasks.push_back(new(allocate_child()) FibTask(n - 1, &x);)
+			}
+
+			cluster(n, depth - 1);
+		}
+
+
+		if (depth == 1) {
+			return;
+		}
+		else {
+			vector<Cluster<T>*> clusters = _clusterer.cluster(current->getKeys());
+			current->clearKeysAndChildren();
+			for (Cluster<T>* c : clusters) {
+				Node<T>* child = new Node<T>();
+				child->addAll(c->getNearestList());
+				current->add(c->getCentroid(), child);
+			}
+			for (Node<T>* n : current->getChildren()) {
+				cluster(n, depth - 1);
+			}
+		}
+
+		long x, y;
+		FibTask& a = *new(allocate_child()) FibTask(n - 1, &x);
+		FibTask& b = *new(allocate_child()) FibTask(n - 2, &y);
+		
+		// Set ref_count to 'two children plus one for the wait".
+		set_ref_count(3);
+		
+		// Start b running.
+		spawn(b);
+		
+		// Start a running and wait for all children (a and b).
+		spawn_and_wait_for_all(a);
+		
+		// Do the sum
+			*sum = x + y;
+		
+		return NULL;
+	}
+};
+*/
 
 
 
