@@ -291,11 +291,11 @@ int main(int argc, char** argv) {
 
         // run experiments
         if (!vectors.empty() && !subset.empty()) {
-            //sigKmeansCluster(subset, "subset_clusters.txt");
+            sigKmeansCluster(subset, "subset_clusters.txt");
             //journalPaperExperiments(subset);
             //sigKTreeCluster(subset);
             //sigTSVQCluster(subset);
-            sigEMTreeCluster(subset);
+            //sigEMTreeCluster(subset);
             //testHistogram(vectors);
             //testMeanVersusNNSpeed(vectors);
             //testReadVectors();

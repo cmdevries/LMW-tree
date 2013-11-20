@@ -117,7 +117,6 @@ public:
     }
 
 private:
-
     void finalizeClusters(vector<T*> &data) {      
         // Create list of final clusters to return;
         bool emptyCluster = assignClusters(data);

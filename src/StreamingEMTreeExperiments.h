@@ -1,10 +1,13 @@
 #ifndef STREAMINGEMTREEEXPERIMENTS_H
 #define	STREAMINGEMTREEEXPERIMENTS_H
 
+#include "CreateSignatures.h"
 #include "StdIncludes.h"
 #include "tbb/task_scheduler_init.h"
 
-#include "CreateSignatures.h"
+#include <sstream>
+
+using namespace std;
 
 typedef SVector<bool> vecType;
 typedef hammingDistance distanceType;
@@ -54,14 +57,33 @@ StreamingEMTree_t* streamingEMTreeInit() {
     return tree;
 }
 
-void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
-    const char docidFile[] = "data/wiki.4096.docids";
-    const char signatureFile[] = "data/wiki.4096.sig";
-    const size_t signatureLength = 4096;
-    const size_t readSize = 1000;
-
+const char wikiDocidFile[] = "data/wiki.4096.docids";
+const char wikiSignatureFile[] = "data/wiki.4096.sig";
+const size_t wikiSignatureLength = 4096;
+    
+void writeClusters(const string& filenamePrefix, StreamingEMTree_t* emtree) {
     // open files
-    SVectorStream<SVector<bool>> vs(docidFile, signatureFile, signatureLength);
+    SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
+
+    // setup output streams for all levels in the tree
+    struct ClusterStreams {
+        ofstream* stats;
+        ofstream* clusters;
+    };
+    vector<ClusterStreams> outputStreams;
+    for (int level = 1; level <= emtree->getMaxLevelCount(); level++) {
+        stringstream ss;
+        ss << filenamePrefix << "_level" << level;
+        ClusterStreams streams;
+        streams.stats = new ofstream(ss.str() + "_cluster_stats.txt");
+        streams.clusters = new ofstream(ss.str() + "_clusters.txt");
+        outputStreams.push_back(streams);
+    }
+}
+
+void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
+    // open files
+    SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
     
     // insert from stream
     boost::timer::auto_cpu_timer insert("inserting into streaming EM-tree: %w seconds\n");

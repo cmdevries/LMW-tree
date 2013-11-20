@@ -60,7 +60,6 @@ public:
     }
 
     size_t insert(SVectorStream<T>& vs) {
-        const int readsize = 1000;
         const int maxtokens = 1024; // maximum number of readsize vector chunks that can be loaded at once
         size_t totalRead = 0;
         
@@ -69,17 +68,7 @@ public:
                 // Input filter reads readsize chunks of vectors in serial
                 tbb::make_filter<void, vector < SVector<bool>*>*>(
                 tbb::filter::serial_out_of_order,
-                [&] (tbb::flow_control & fc) -> vector < SVector<bool>*>* {
-                    auto data = new vector<T*>;
-                    size_t read = vs.read(readsize, data);
-                    if (read == 0) {
-                        delete data;
-                        fc.stop();
-                        return NULL;
-                    }
-                    totalRead += data->size();
-                    return data;
-                }
+                inputFilter(vs, totalRead)
         ) &
         // Insert filter inserts readsize chunks of vectors into streaming EM-tree in parallel
         tbb::make_filter < vector < SVector<bool>*>*, void>(
@@ -302,6 +291,21 @@ private:
             }
         }
     }
+
+    std::function<vector<SVector<bool>*>*(tbb::flow_control&)> inputFilter(
+            SVectorStream<T>& vs, size_t& totalRead) {
+        return ([&] (tbb::flow_control & fc) -> vector < SVector<bool>*>* {
+            auto data = new vector<T*>;
+            size_t read = vs.read(_readsize, data);
+            if (read == 0) {
+                delete data;
+                fc.stop();
+                return NULL;
+            }
+            totalRead += data->size();
+            return data;
+        });
+    }
     
     double sumSquaredError(Node<AccumulatorKey>* node) {
         if (node->isLeaf()) {
@@ -361,7 +365,8 @@ private:
 
     Node<AccumulatorKey>* _root;
     DISTANCE _dist;
-    PROTOTYPE _prototype;  
+    PROTOTYPE _prototype;
+    int _readsize = 1000;
 };
  
 #endif	/* STREAMINGEMTREE_H */
