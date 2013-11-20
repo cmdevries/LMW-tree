@@ -251,7 +251,7 @@ private:
         // Parallel
         VecToCentroid vc(this, data);
         tbb::parallel_for(tbb::blocked_range<size_t>(0, data.size(), 1000), vc);
-        tbb::atomic_fence(); // make sure all data is visible
+        tbb::atomic_fence(); // make sure all writes are visible on all CPUs
 
         // Serial
         // Clear the nearest vectors in each cluster
@@ -296,7 +296,7 @@ private:
     void recalculateCentroids(vector<T*> &data) {
         RecalculateCentroid recalculate(this);
         tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 2), recalculate);
-        tbb::atomic_fence(); // make sure all data is visible
+        tbb::atomic_fence(); // make sure all writes are visible on all CPUs
     }
 };
 
