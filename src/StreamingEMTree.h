@@ -94,6 +94,7 @@ class StreamingEMTree {
 public:
     explicit StreamingEMTree(Node<T>* root) :
         _root(new Node<AccumulatorKey>()) {
+            _root->setOwnsKeys(true);
             deepCopy(root, _root);
     }
         
@@ -155,6 +156,21 @@ private:
     typedef tbb::mutex Mutex;
     
     struct AccumulatorKey {
+        AccumulatorKey() : key(NULL), sumSquaredError(0), accumulator(NULL),
+                count(0), mutex(NULL) { }
+        
+        ~AccumulatorKey() {
+            if (key) {
+                delete key;
+            }
+            if (accumulator) {
+                delete accumulator;
+            }
+            if (mutex) {
+                delete mutex;
+            }
+        }
+                
         T* key;
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
@@ -284,8 +300,7 @@ private:
             }            
         }
     }
-   
-        
+       
     void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
             size_t dimensions = src->getKey(0)->size();
@@ -294,10 +309,6 @@ private:
                 auto child = src->getChild(i);
                 auto accumulatorKey = new AccumulatorKey();
                 accumulatorKey->key = new T(key);
-                accumulatorKey->sumSquaredError = 0;
-                accumulatorKey->accumulator = NULL;
-                accumulatorKey->count = 0;
-                accumulatorKey->mutex = NULL;
                 if (child->isLeaf()) {
                     // Do not copy leaves of original tree and setup
                     // accumulators for the lowest level cluster means.
@@ -307,6 +318,7 @@ private:
                     dst->add(accumulatorKey);
                 } else {
                     auto newChild = new Node<AccumulatorKey>();
+                    newChild->setOwnsKeys(true);
                     deepCopy(child, newChild);
                     dst->add(accumulatorKey, newChild);
                 }

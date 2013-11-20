@@ -8,20 +8,6 @@
 
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class TSVQ {
-private:
-    // The order of this tree
-    int _m;
-
-    // The order of this tree
-    int _depth;
-
-    // The root of the tree.
-    Node<T> *_root;
-
-    ClustererType _clusterer;
-    DistanceType _distF;
-    ProtoType _protoF;
-
 public:
     TSVQ(int order, int depth, int maxiters) : _m(order), _depth(depth),
             _root(new Node<T>()) {
@@ -82,6 +68,7 @@ public:
                 child->addAll(c->getNearestList());
                 current->add(c->getCentroid(), child);
             }
+            current->setOwnsKeys(true);
             for (Node<T>* n : current->getChildren()) {
                 cluster(n, depth - 1);
             }
@@ -91,7 +78,6 @@ public:
     double getRMSE() {
         return RMSE();
     }
-
 
 private:
     double RMSE() {
@@ -198,9 +184,19 @@ private:
         }
     }
 
+private:
+    // The order of this tree
+    int _m;
 
+    // The order of this tree
+    int _depth;
+
+    // The root of the tree.
+    Node<T> *_root;
+
+    ClustererType _clusterer;
+    DistanceType _distF;
+    ProtoType _protoF;
 };
 
-
 #endif	/* TSVQ_H */
-

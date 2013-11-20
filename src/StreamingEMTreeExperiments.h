@@ -96,7 +96,7 @@ void streamingEMTree() {
     }
 
     // streaming EMTree
-    const int maxIters = 10;
+    const int maxIters = 2;
     StreamingEMTree_t* emtree = streamingEMTreeInit();
     cout << endl << "Streaming EM-tree:" << endl;
     for (int i = 0; i < maxIters - 1; i++) {

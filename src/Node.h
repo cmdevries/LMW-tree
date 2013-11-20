@@ -5,20 +5,8 @@
 
 template <typename T>
 class Node {
-private:
-    // In Leaf nodes the keys are the data.
-    vector<T*> _keys;
-
-    // Child nodes if this is an internal cluster node.
-    vector<Node*> _children;
-
-    bool _isLeaf;
-    
 public:
-
-    Node() {
-        _isLeaf = true;
-    }
+    Node() : _isLeaf(true), _ownsKeys(false) { }
     
     ~Node() {
         for (size_t i = 0; i < size(); i++) {
@@ -37,6 +25,14 @@ public:
     int size() {
         return _keys.size();
     }
+    
+    bool getOwnsKeys() {
+        return _ownsKeys;
+    }
+    
+    void setOwnsKeys(bool ownsKeys) {
+        _ownsKeys = ownsKeys;
+    }
 
     T* getKey(int i) {
         return _keys[i];
@@ -46,14 +42,16 @@ public:
         return _keys;
     }
 
-    // pre: is not a leaf
-
+    /**
+     * pre: !isLeaf()
+     */
     Node* getChild(int i) {
         return _children[i];
     }
 
-    // pre: is not a leaf
-
+    /**
+     * pre: !isLeaf()
+     */
     vector<Node*>& getChildren() {
         return _children;
     }
@@ -63,8 +61,9 @@ public:
         _keys.clear();
     }
 
-    // pre: is leaf
-
+    /**
+     * pre: isLeaf()
+     */
     void add(T* key) {
         _keys.push_back(key);
     }
@@ -96,31 +95,27 @@ public:
         _isLeaf = true;
     }
 
-    void removeEmptyChildren() {
-
-
-    }
-
     void remove(int i) {
-        if (!_isLeaf) {
+        if (_ownsKeys) {
             // Free the memory for the centroid key
             delete _keys[i];
-            _keys[i] = NULL;
+            _keys[i] = NULL;            
+        }
+        if (!_isLeaf) {
             // Delete associated child node
             delete _children[i];
             _children[i] = NULL;
         }
     }
 
-    // Use this to finalize individual removals.
-    // No need to use this after calling removeAll()
-
+    /**
+     * Use this to finalize individual removals.
+     * No need to use this after calling removeAll().
+     */
     void finalizeRemovals() {
-
         // Remove NULL keys and corresponding NULL children
         int toRemove = 0;
         int sz = _keys.size();
-
         for (int i = 0; i < _keys.size(); i++) {
             if (_keys[i] == NULL) {
                 toRemove++;
@@ -129,23 +124,34 @@ public:
                 _keys[i - toRemove] = _keys[i];
 
                 // Shuffle children down
-                if (!_isLeaf) _children[i - toRemove] = _children[i];
+                if (!_isLeaf) {
+                    _children[i - toRemove] = _children[i];
+                }
             }
         }
 
         // Resize vector containers
         int newSize = sz - toRemove;
-
         if (toRemove > 0) {
             _keys.resize(newSize);
-            if (!_isLeaf) _children.resize(newSize);
+            if (!_isLeaf) {
+                _children.resize(newSize);
+            }
         }
     }
+    
+private:
+    // In Leaf nodes the keys are the data.
+    vector<T*> _keys;
 
+    // Child nodes if this is an internal cluster node.
+    vector<Node*> _children;
+
+    // Does this node have any children?
+    bool _isLeaf;
+    
+    // Will the keys be deleted?
+    bool _ownsKeys;
 };
 
-
 #endif	/* NODE_H */
-
-
-
