@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <atomic>
+#include <functional>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -33,6 +34,7 @@ using std::endl;
 using std::flush;
 using std::shared_ptr;
 using std::max;
+using std::atomic;
 
 using boost::dynamic_bitset;
 
