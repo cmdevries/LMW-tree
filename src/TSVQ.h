@@ -8,85 +8,13 @@
 #include "tbb/task.h"
 
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
-class TSVQTask : public tbb::task {
-public:
-
-    TSVQTask(Node<T>* current, int order, int depth, int maxiters) : _current(current), _m(order),
-    _treeDepth(depth),
-    _maxIters(maxiters) {
-    }
-
-    ~TSVQTask() {
-    }
-
-    void cluster() {
-        ClustererType* clusterer = new ClustererType();
-        clusterer->setNumClusters(_m);
-        clusterer->setMaxIters(_maxIters);
-        vector<Cluster<T>*> clusters = clusterer->cluster(_current->getKeys());
-        _current->clearKeysAndChildren();
-        for (Cluster<T>* c : clusters) {
-            Node<T>* child = new Node<T>();
-            child->addAll(c->getNearestList());
-            _current->add(c->getCentroid(), child);
-        }
-        _current->setOwnsKeys(true);
-        delete clusterer;
-    }
-
-    void createChildTasks() {
-        vector<TSVQTask*> tasks;
-        // Create TBB tasks
-        for (Node<T>* n : _current->getChildren()) {
-            TSVQTask *t = new(allocate_child()) TSVQTask(n, _m, _treeDepth - 1, _maxIters);
-            tasks.push_back(t);
-        }
-        // Set ref count to number of tasks + 1
-        set_ref_count(tasks.size() + 1);
-        // Spawn tasks, except 1st task
-        for (size_t i = 1; i < tasks.size(); i++) {
-            tbb::task::spawn(*tasks[i]);
-        }
-        // Start 1st task running and wait for all
-        tbb::task::spawn_and_wait_for_all(*tasks[0]);
-    }
-
-    tbb::task* execute() {
-        if (_treeDepth == 1) {
-            return NULL;
-        } else {
-            cluster();
-            createChildTasks();
-        }
-        return NULL;
-    }
-
-private:
-    // Num clusters
-    int _m;
-
-    // The current tree depth
-    int _treeDepth;
-
-    // The maximum number of iterations
-    int _maxIters;
-
-    // The root of the tree.
-    Node<T> *_current;
-
-    DistanceType _distF;
-    ProtoType _protoF;
-};
-
-
-
-template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class TSVQ {
 public:
+
     TSVQ(int order, int depth, int maxiters) : _m(order), _depth(depth),
-            _root(new Node<T>()), _maxIters(maxiters) {
+    _root(new Node<T>()), _maxIters(maxiters) {
         _clusterer.setNumClusters(_m);
-		_clusterer.setMaxIters(_maxIters);
+        _clusterer.setMaxIters(_maxIters);
     }
     
     ~TSVQ() {
@@ -126,42 +54,99 @@ public:
     }
 
     void cluster(vector<T*> &data) {
-
-		typedef TSVQTask<T, ClustererType, DistanceType, ProtoType> TASK_TYPE;
-		
-		// make the root a leaf containing all data
+        // make the root a leaf containing all data
         _root->addAll(data);
-
-		TASK_TYPE *t = new(tbb::task::allocate_root()) TASK_TYPE(_root, _m, _depth, _maxIters);
-		tbb::task::spawn_root_and_wait(*t);
-
-        //cluster(_root, _depth);
+        
+        // spawn parallel tasks for recursion when building the tree
+        TSVQTask *t = new(tbb::task::allocate_root()) TSVQTask(_root, _m, _depth, _maxIters);
+        tbb::task::spawn_root_and_wait(*t);
     }
-	/*
-    void cluster(Node<T>* current, int depth) {
-        if (depth == 1) {
-            return;
-        } else {
-            vector<Cluster<T>*> clusters = _clusterer.cluster(current->getKeys());
-            current->clearKeysAndChildren();
-            for (Cluster<T>* c : clusters) {
-                Node<T>* child = new Node<T>();
-                child->addAll(c->getNearestList());
-                current->add(c->getCentroid(), child);
-            }
-            current->setOwnsKeys(true);
-            for (Node<T>* n : current->getChildren()) {
-                cluster(n, depth - 1);
-            }
-        }
-    }
-	*/
 
     double getRMSE() {
         return RMSE();
     }
 
 private:
+    
+    class TSVQTask : public tbb::task {
+    public:
+
+        TSVQTask(Node<T>* current, int order, int depth, int maxiters) : _current(current), _m(order),
+        _treeDepth(depth),
+        _maxIters(maxiters) {
+        }
+
+        ~TSVQTask() {
+        }
+
+        void cluster() {
+            // split using clustering algorithm
+            ClustererType* clusterer = new ClustererType();
+            clusterer->setNumClusters(_m);
+            clusterer->setMaxIters(_maxIters);
+            vector<Cluster<T>*> clusters = clusterer->cluster(_current->getKeys());            
+            
+            // assign clusters to tree
+            _current->clearKeysAndChildren();
+            for (Cluster<T>* c : clusters) {
+                Node<T>* child = new Node<T>();
+                child->addAll(c->getNearestList());
+                _current->add(c->getCentroid(), child);
+            }
+            _current->setOwnsKeys(true);
+            delete clusterer;
+        }
+
+        /**
+         * Separate tasks are created for each child node in the tree. Simply
+         * parallelizing k-means does not enable full usage of CPUs on a 16 CPU
+         * system. By allocating tasks, multiple copies of parallel k-means can
+         * run at once.
+         */
+        void createChildTasks() {
+            vector<TSVQTask*> childTasks;
+            // Create TBB tasks
+            for (Node<T>* n : _current->getChildren()) {
+                TSVQTask *t = new(allocate_child()) TSVQTask(n, _m, _treeDepth - 1, _maxIters);
+                childTasks.push_back(t);
+            }
+            // Set ref count to number of tasks + 1
+            set_ref_count(childTasks.size() + 1);
+            // Spawn tasks, except 1st task
+            for (size_t i = 1; i < childTasks.size(); i++) {
+                tbb::task::spawn(*childTasks[i]);
+            }
+            // Start 1st task running and wait for all
+            tbb::task::spawn_and_wait_for_all(*childTasks[0]);
+        }
+
+        tbb::task* execute() {
+            if (_treeDepth == 1) {
+                return NULL;
+            } else {
+                cluster();
+                createChildTasks();
+            }
+            return NULL;
+        }
+
+    private:
+        // Num clusters
+        int _m;
+
+        // The current tree depth
+        int _treeDepth;
+
+        // The maximum number of iterations
+        int _maxIters;
+
+        // The root of the tree.
+        Node<T> *_current;
+
+        DistanceType _distF;
+        ProtoType _protoF;
+    };
+
     double RMSE() {
         double RMSE = sumSquaredError(NULL, _root);
         uint64_t size = getObjCount();
