@@ -59,19 +59,48 @@ public:
         delete _root;
     }
 
-    size_t insert(SVectorStream<T>& vs) {
-        const int maxtokens = 1024; // maximum number of readsize vector chunks that can be loaded at once
+    size_t visit(SVectorStream<T>& vs, InsertVisitor<T>& visitor) {
         size_t totalRead = 0;
-        
+
         // setup parallel processing pipeline
-        tbb::parallel_pipeline(maxtokens,
+        tbb::parallel_pipeline(_maxtokens,
                 // Input filter reads readsize chunks of vectors in serial
                 tbb::make_filter<void, vector < SVector<bool>*>*>(
                 tbb::filter::serial_out_of_order,
                 inputFilter(vs, totalRead)
-        ) &
-        // Insert filter inserts readsize chunks of vectors into streaming EM-tree in parallel
-        tbb::make_filter < vector < SVector<bool>*>*, void>(
+                ) &
+                // Visit filter visits readsize chunks of vectors into streaming EM-tree in parallel
+                tbb::make_filter < vector < SVector<bool>*>*, void>(
+                tbb::filter::parallel,
+                [&] (vector < SVector<bool>*>* data) -> void {
+                    visit(*data, visitor);
+                    vs.free(data);
+                            delete data;
+                }
+        )
+        );
+
+        return totalRead;
+    }
+    
+    void visit(vector<T*>& data, InsertVisitor<T>& visitor) {
+        for (T* object : data) {
+            visit(_root, object, visitor);
+        }
+    }
+
+    size_t insert(SVectorStream<T>& vs) {
+        size_t totalRead = 0;
+
+        // setup parallel processing pipeline
+        tbb::parallel_pipeline(_maxtokens,
+                // Input filter reads readsize chunks of vectors in serial
+                tbb::make_filter<void, vector < SVector<bool>*>*>(
+                tbb::filter::serial_out_of_order,
+                inputFilter(vs, totalRead)
+                ) &
+                // Insert filter inserts readsize chunks of vectors into streaming EM-tree in parallel
+                tbb::make_filter < vector < SVector<bool>*>*, void>(
                 tbb::filter::parallel,
                 [&] (vector < SVector<bool>*>* data) -> void {
                     insert(*data);
@@ -80,7 +109,7 @@ public:
                 }
         )
         );
-        
+
         return totalRead;
     }
     
@@ -160,6 +189,23 @@ private:
         }
         return nearest;
     }   
+    
+    void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
+        float nearestDistance = 0;
+        size_t nearestIndex = nearest(node, object, &nearestDistance);
+        auto accumulatorKey = node->getKey(nearestIndex);
+        uint64_t count = accumulatorKey->count;
+        double sumSquaredError = accumulatorKey->sumSquaredError;
+        if (!node->isLeaf()) {
+            count = objCount(node->getChild(nearestIndex));
+            sumSquaredError = sumSquaredError(node->getChild(nearestIndex));
+        }
+        double RMSE = sqrt(sumSquaredError / count);
+        visitor.accept(accumulatorKey->key, level, RMSE, count);
+        if (!node->isLeaf()) {
+            visit(node->getChild(nearestIndex), object, level + 1);
+        }
+    }    
     
     void insert(Node<AccumulatorKey>* node, T* object) {
         float nearestDistance = 0;
@@ -366,7 +412,12 @@ private:
     Node<AccumulatorKey>* _root;
     DISTANCE _dist;
     PROTOTYPE _prototype;
+    
+    // How mamny vectors to read at once when processing a stream.
     int _readsize = 1000;
+    
+    // The maximum number of readsize vector chunks that can be loaded at once.
+    int _maxtokens = 1024;
 };
  
 #endif	/* STREAMINGEMTREE_H */
