@@ -268,6 +268,8 @@ void testHistogram(vector<SVector<bool>*>& vectors) {
 
 int main(int argc, char** argv) {
     std::srand(std::time(0));
+
+
     
     if (true) {
         streamingEMTree();

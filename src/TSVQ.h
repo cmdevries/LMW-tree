@@ -5,14 +5,89 @@
 
 #include "Node.h"
 
+#include "tbb/task.h"
+
+using namespace tbb;
+
+template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
+class TSVQTask : public task {
+public:
+	TSVQTask(Node<T>* current, int order, int depth, int maxiters) : _current(current), _m(order), 
+		_treeDepth(depth),
+		_maxIters(maxiters) 
+	{
+		_clusterer.setNumClusters(_m);
+		_clusterer.setMaxIters(maxiters);
+	}
+
+	~TSVQTask() {	
+
+
+	}
+
+	task* execute() {
+
+		typedef TSVQTask<T, ClustererType, DistanceType, ProtoType> TASK_TYPE;
+
+		if (_treeDepth == 1) {
+			return NULL;
+		}
+		else {
+			// Cluster
+			vector<Cluster<T>*> clusters = _clusterer.cluster(_current->getKeys());
+			_current->clearKeysAndChildren();
+			for (Cluster<T>* c : clusters) {
+				Node<T>* child = new Node<T>();
+				child->addAll(c->getNearestList());
+				_current->add(c->getCentroid(), child);
+			}
+			_current->setOwnsKeys(true);
+			TASK_TYPE *t;
+			vector<TASK_TYPE*> tasks;
+			// Create TBB tasks
+			for (Node<T>* n : _current->getChildren()) {
+				t = new(allocate_child()) TASK_TYPE(n, _m, _treeDepth - 1, _maxIters);
+				tasks.push_back(t);
+			}
+			// Set ref count to number of tasks + 1
+			set_ref_count(tasks.size()+1);
+			// Spawn tasks, except 1st task
+			for (size_t i = 1; i < tasks.size(); i++) spawn(*tasks[i]);
+			// Start 1st task running and wait for all
+			spawn_and_wait_for_all(*tasks[0]);
+		}
+
+		return NULL;
+	}
+
+private:
+	// Num clusters
+	int _m;
+
+	// The current tree depth
+	int _treeDepth;
+
+	// The maximum number of iterations
+	int _maxIters;
+
+	// The root of the tree.
+	Node<T> *_current;
+
+	ClustererType _clusterer;
+	DistanceType _distF;
+	ProtoType _protoF;
+
+};
+
+
 
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class TSVQ {
 public:
     TSVQ(int order, int depth, int maxiters) : _m(order), _depth(depth),
-            _root(new Node<T>()) {
+            _root(new Node<T>()), _maxIters(maxiters) {
         _clusterer.setNumClusters(_m);
-        _clusterer.setMaxIters(maxiters);
+		_clusterer.setMaxIters(_maxIters);
     }
     
     ~TSVQ() {
@@ -52,11 +127,18 @@ public:
     }
 
     void cluster(vector<T*> &data) {
-        // make the root a leaf containing all data
-        _root->addAll(data);
-        cluster(_root, _depth);
-    }
 
+		typedef TSVQTask<T, ClustererType, DistanceType, ProtoType> TASK_TYPE;
+		
+		// make the root a leaf containing all data
+        _root->addAll(data);
+
+		TASK_TYPE *t = new(task::allocate_root()) TASK_TYPE(_root, _m, _depth, _maxIters);
+		task::spawn_root_and_wait(*t);
+
+        //cluster(_root, _depth);
+    }
+	/*
     void cluster(Node<T>* current, int depth) {
         if (depth == 1) {
             return;
@@ -74,6 +156,7 @@ public:
             }
         }
     }
+	*/
 
     double getRMSE() {
         return RMSE();
@@ -193,6 +276,9 @@ private:
 
     // The root of the tree.
     Node<T> *_root;
+
+	// The maximum number of iterations
+	int _maxIters;
 
     ClustererType _clusterer;
     DistanceType _distF;

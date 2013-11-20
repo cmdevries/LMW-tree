@@ -11,6 +11,7 @@ struct BitMapList8Entry {
 
 class BitMapList8 {
 
+	//BitMapList8Entry entries[256];
 	BitMapList8Entry *entries;
 
 private:

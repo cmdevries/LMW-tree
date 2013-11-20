@@ -11,6 +11,7 @@ struct BitMapList16Entry {
 
 class BitMapList16 {
 
+	//BitMapList16Entry entries[65536];
 	BitMapList16Entry *entries;
 
 private:
@@ -25,6 +26,7 @@ public:
 	}
 
 	~BitMapList16() {
+
 		delete[] entries;
 	}
 

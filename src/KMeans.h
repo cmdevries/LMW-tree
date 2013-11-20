@@ -186,6 +186,9 @@ private:
         while (!_converged) {
             vectorsToNearestCentroid(data);
             recalculateCentroids(data);
+
+			cout << endl << getRMSE(data);
+
             _iterCount++;
             if (_maxIters != -1 && _iterCount >= _maxIters) {
                 break;
