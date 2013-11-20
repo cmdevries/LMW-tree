@@ -294,7 +294,7 @@ int main(int argc, char** argv) {
             //journalPaperExperiments(subset);
             //sigKTreeCluster(subset);
             //sigTSVQCluster(subset);
-            //sigEMTreeCluster(subset);
+            sigEMTreeCluster(subset);
             //testHistogram(vectors);
             //testMeanVersusNNSpeed(vectors);
             //testReadVectors();

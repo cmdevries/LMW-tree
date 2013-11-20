@@ -6,65 +6,6 @@
 #include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
-// TBB Filters for parallel insertion into Streaming EM-tree
-
-template <typename SVECTOR>
-class InputFilter : public tbb::filter {
-public:
-    InputFilter(SVectorStream<SVECTOR>* vs, size_t readsize = 1000) : 
-        filter(serial_out_of_order),
-        _vs(vs),
-        _readsize(readsize),
-        _read(0)
-        { }
-        
-    ~InputFilter() { }
-
-    size_t read() {
-        return _read;
-    }
-    
-private:
-    SVectorStream<SVECTOR>* _vs;
-    size_t _readsize;
-    size_t _read;
-
-    void* operator()(void*) {
-        auto data = new vector<SVECTOR*>;
-        size_t read = _vs->read(_readsize, data);
-        if (read == 0) {
-            delete data;
-            return NULL;
-        }
-        _read += data->size();
-        return data;
-    }
-};
-
-template <typename SVECTOR, typename STREAMINGEMTREE>
-class InsertFilter : public tbb::filter {
-public:
-    InsertFilter(SVectorStream<SVECTOR>* vs, STREAMINGEMTREE* emtree) :
-        filter(parallel),
-        _vs(vs),
-        _emtree(emtree)
-        { }
-    
-    ~InsertFilter() { }
-    
-private:
-    SVectorStream<SVECTOR>* _vs;
-    STREAMINGEMTREE* _emtree;
-    
-    void* operator()(void* item) {
-        auto data = (vector<SVECTOR*>*)item;
-        _emtree->insert(*data);
-        _vs->free(data);
-        delete data;
-		return NULL;
-    }
-};
-
 /**
  * The streaming version of the EM-tree algorithm does not store the
  * data vectors in the tree. Therefore, the leaf level in the tree contain
@@ -106,9 +47,9 @@ public:
         // maximum number of readsize vector chunks that can be loaded at once
         const int maxtokens = 1024;
         tbb::pipeline pipeline;
-        InputFilter<T> inputFilter(&vs);
+        InputFilter inputFilter(&vs);
         pipeline.add_filter(inputFilter);
-        InsertFilter<T, StreamingEMTree> insertFilter(&vs, this);
+        InsertFilter insertFilter(&vs, this);
         pipeline.add_filter(insertFilter);
         pipeline.run(maxtokens);
         return inputFilter.read();
@@ -153,6 +94,69 @@ public:
     }
 
 private:
+    /**
+     * serial TBB Filter for reading from stream
+     */
+    class InputFilter : public tbb::filter {
+    public:
+        InputFilter(SVectorStream<T>* vs, size_t readsize = 1000) :
+        filter(serial_out_of_order),
+        _vs(vs),
+        _readsize(readsize),
+        _read(0) {
+        }
+
+        ~InputFilter() {
+        }
+
+        size_t read() {
+            return _read;
+        }
+
+    private:
+        void* operator()(void*) {
+            auto data = new vector<T*>;
+            size_t read = _vs->read(_readsize, data);
+            if (read == 0) {
+                delete data;
+                return NULL;
+            }
+            _read += data->size();
+            return data;
+        }
+        
+        SVectorStream<T>* _vs;
+        size_t _readsize;
+        size_t _read;        
+    };
+
+    /**
+     * Parallel TBB Filter for inserting into Streaming EM-tree.
+     */    
+    class InsertFilter : public tbb::filter {
+    public:
+        InsertFilter(SVectorStream<T>* vs, StreamingEMTree* emtree) :
+        filter(parallel),
+        _vs(vs),
+        _emtree(emtree) {
+        }
+
+        ~InsertFilter() {
+        }
+
+    private:
+        void* operator()(void* item) {
+            auto data = (vector<T*>*)item;
+            _emtree->insert(*data);
+            _vs->free(data);
+            delete data;
+            return NULL;
+        }
+        
+        SVectorStream<T>* _vs;
+        StreamingEMTree* _emtree;        
+    };
+
     typedef tbb::mutex Mutex;
     
     struct AccumulatorKey {
@@ -177,11 +181,7 @@ private:
         uint64_t count; // how many vectors have been added to accumulator
         Mutex* mutex;
     };
-    
-    Node<AccumulatorKey>* _root;
-    DISTANCE _dist;
-    PROTOTYPE _prototype;    
-    
+   
     size_t nearest(Node<AccumulatorKey>* node, T* object, float* nearestDistance) {
         size_t nearest = 0;
         *nearestDistance = _dist(object, node->getKey(0)->key);
@@ -381,6 +381,10 @@ private:
             return localCount;
         }
     }    
+
+    Node<AccumulatorKey>* _root;
+    DISTANCE _dist;
+    PROTOTYPE _prototype;  
 };
  
 #endif	/* STREAMINGEMTREE_H */
