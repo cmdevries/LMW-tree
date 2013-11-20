@@ -40,6 +40,10 @@ public:
         _m = -1;
         _root = root;
     }    
+    
+    ~EMTree() {
+        delete _root;
+    }
 
     int getClusterCount() {
         return clusterCount(_root);
@@ -93,6 +97,7 @@ public:
                 child->addAll(c->getNearestList());
                 current->add(c->getCentroid(), child);
             }
+            current->setOwnsKeys(true);
             splits.pop_front();
             for (Node<T>* n : current->getChildren()) {
                 seedSingleThreaded(n, splits);
@@ -101,73 +106,6 @@ public:
     }
 
     void seed(Node<T>* current, int depth) {
-
-		/*
-        //cout << "\n\nSeeding ... " << current->size();
-
-        Node<T> *child;
-
-        //assert(current.isLeaf());
-        if (depth == 1) {
-            //cout << "\n*";
-            return;
-        } else {
-
-            // Copy clusters - if we don't copy we will have problems
-            // with recursion.
-            vector<Cluster<T>*> clusters = _clusterer.cluster(current->getKeys());
-
-            //cout << "\n" << clusters.size();
-
-            // split the leaf into m parts
-            //km.cluster(current.getKeyList());
-            //List<Cluster> clusters = km.getClusters();
-
-            //if (clusters.size() < _m) { // split didn't work, so stop
-            //    cout << "\nBad split ...";
-            //    return;
-            //}
-
-            // make keys centroids from k-means and children the nearest neigbhours
-            current->clearKeysAndChildren();
-
-            //int count=0;
-            for (Cluster<T>* c : clusters) {
-                //cout << "\nCluster ..." << count;
-                //count++;
-
-                child = new Node<T>();
-
-                child->addAll(c->getNearestList());
-                current->add(c->getCentroid(), child);
-
-                // continue to split until base case is reached
-                //seed(child);
-            }
-
-            vector<Node<T>*> &children = current->getChildren();
-
-            int count = 0;
-            for (Node<T>* n : children) {
-
-                // Seed each of the children
-
-                //
-                //EMTree<T, ClustererType, DistanceType, ProtoType>::seed
-
-                //cout << "\nScheduling ...  " << _m << "  " << _maxLeaf;
-
-                _tPool.schedule(std::bind(seedTask<T, ClustererType>::seed, n, _m, depth - 1));
-                //_tPool.schedule(std::bind(taskT<int,float>::run, count, 10.5f));
-
-                //seed(n);
-
-                count++;
-
-            }
-
-        }
-		*/
     }
 
     void EMStep() {

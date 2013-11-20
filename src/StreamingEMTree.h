@@ -6,65 +6,6 @@
 #include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
-// TBB Filters for parallel insertion into Streaming EM-tree
-
-template <typename SVECTOR>
-class InputFilter : public tbb::filter {
-public:
-    InputFilter(SVectorStream<SVECTOR>* vs, size_t readsize = 1000) : 
-        filter(serial_out_of_order),
-        _vs(vs),
-        _readsize(readsize),
-        _read(0)
-        { }
-        
-    ~InputFilter() { }
-
-    size_t read() {
-        return _read;
-    }
-    
-private:
-    SVectorStream<SVECTOR>* _vs;
-    size_t _readsize;
-    size_t _read;
-
-    void* operator()(void*) {
-        auto data = new vector<SVECTOR*>;
-        size_t read = _vs->read(_readsize, data);
-        if (read == 0) {
-            delete data;
-            return NULL;
-        }
-        _read += data->size();
-        return data;
-    }
-};
-
-template <typename SVECTOR, typename STREAMINGEMTREE>
-class InsertFilter : public tbb::filter {
-public:
-    InsertFilter(SVectorStream<SVECTOR>* vs, STREAMINGEMTREE* emtree) :
-        filter(parallel),
-        _vs(vs),
-        _emtree(emtree)
-        { }
-    
-    ~InsertFilter() { }
-    
-private:
-    SVectorStream<SVECTOR>* _vs;
-    STREAMINGEMTREE* _emtree;
-    
-    void* operator()(void* item) {
-        auto data = (vector<SVECTOR*>*)item;
-        _emtree->insert(*data);
-        _vs->free(data);
-        delete data;
-		return NULL;
-    }
-};
-
 /**
  * The streaming version of the EM-tree algorithm does not store the
  * data vectors in the tree. Therefore, the leaf level in the tree contain
@@ -94,6 +35,7 @@ class StreamingEMTree {
 public:
     explicit StreamingEMTree(Node<T>* root) :
         _root(new Node<AccumulatorKey>()) {
+            _root->setOwnsKeys(true);
             deepCopy(root, _root);
     }
         
@@ -105,9 +47,9 @@ public:
         // maximum number of readsize vector chunks that can be loaded at once
         const int maxtokens = 1024;
         tbb::pipeline pipeline;
-        InputFilter<T> inputFilter(&vs);
+        InputFilter inputFilter(&vs);
         pipeline.add_filter(inputFilter);
-        InsertFilter<T, StreamingEMTree> insertFilter(&vs, this);
+        InsertFilter insertFilter(&vs, this);
         pipeline.add_filter(insertFilter);
         pipeline.run(maxtokens);
         return inputFilter.read();
@@ -127,9 +69,8 @@ public:
     }
     
     void update() {
-        for (int depth = getMaxLevelCount(); depth >= 1; --depth) {
-            update(_root, depth);
-        }        
+        update(_root);
+        clearAccumulators(_root);
     }
     
     int getMaxLevelCount() {
@@ -153,20 +94,94 @@ public:
     }
 
 private:
+    /**
+     * serial TBB Filter for reading from stream
+     */
+    class InputFilter : public tbb::filter {
+    public:
+        InputFilter(SVectorStream<T>* vs, size_t readsize = 1000) :
+        filter(serial_out_of_order),
+        _vs(vs),
+        _readsize(readsize),
+        _read(0) {
+        }
+
+        ~InputFilter() {
+        }
+
+        size_t read() {
+            return _read;
+        }
+
+    private:
+        void* operator()(void*) {
+            auto data = new vector<T*>;
+            size_t read = _vs->read(_readsize, data);
+            if (read == 0) {
+                delete data;
+                return NULL;
+            }
+            _read += data->size();
+            return data;
+        }
+        
+        SVectorStream<T>* _vs;
+        size_t _readsize;
+        size_t _read;        
+    };
+
+    /**
+     * Parallel TBB Filter for inserting into Streaming EM-tree.
+     */    
+    class InsertFilter : public tbb::filter {
+    public:
+        InsertFilter(SVectorStream<T>* vs, StreamingEMTree* emtree) :
+        filter(parallel),
+        _vs(vs),
+        _emtree(emtree) {
+        }
+
+        ~InsertFilter() {
+        }
+
+    private:
+        void* operator()(void* item) {
+            auto data = (vector<T*>*)item;
+            _emtree->insert(*data);
+            _vs->free(data);
+            delete data;
+            return NULL;
+        }
+        
+        SVectorStream<T>* _vs;
+        StreamingEMTree* _emtree;        
+    };
+
     typedef tbb::mutex Mutex;
     
     struct AccumulatorKey {
+        AccumulatorKey() : key(NULL), sumSquaredError(0), accumulator(NULL),
+                count(0), mutex(NULL) { }
+        
+        ~AccumulatorKey() {
+            if (key) {
+                delete key;
+            }
+            if (accumulator) {
+                delete accumulator;
+            }
+            if (mutex) {
+                delete mutex;
+            }
+        }
+                
         T* key;
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
         uint64_t count; // how many vectors have been added to accumulator
         Mutex* mutex;
     };
-    
-    Node<AccumulatorKey>* _root;
-    DISTANCE _dist;
-    PROTOTYPE _prototype;    
-    
+   
     size_t nearest(Node<AccumulatorKey>* node, T* object, float* nearestDistance) {
         size_t nearest = 0;
         *nearestDistance = _dist(object, node->getKey(0)->key);
@@ -214,62 +229,78 @@ private:
         return pruned;
     }
     
+    void gatherAccumulators(Node<AccumulatorKey>* node, ACCUMULATOR* total,
+            uint64_t* totalCount) {
+        if (node->isLeaf()) {
+            for (auto accumulatorKey : node->getKeys()) {
+                auto accumulator = accumulatorKey->accumulator;
+                for (size_t i = 0; i < accumulator->size(); i++) {
+                    (*total)[i] += (*accumulator)[i];
+                }
+                *totalCount += accumulatorKey->count;
+            }
+        } else {
+            for (auto child : node->getChildren()) {
+                gatherAccumulators(child, total, totalCount);
+            }
+        }
+    }
+    
     /**
      * TODO(cdevries): Make it work for something other than bitvectors. It needs
      * to be parameterized, for example, with float vectors, a mean is taken.
      */
-    void updatePrototypeFromAccumulators(AccumulatorKey* accumulatorKey) {
+    static void updatePrototypeFromAccumulator(T* key, ACCUMULATOR* accumulator,
+            uint64_t count) {
         // calculate new key based on accumulator
-        T* key = accumulatorKey->key;
-        ACCUMULATOR* accumulator = accumulatorKey->accumulator;
-        int halfCount = accumulatorKey->count / 2;
         key->setAllBlocks(0);
         for (size_t i = 0; i < key->size(); i++) {
-            if ((*accumulator)[i] > halfCount) {
+            if ((*accumulator)[i] > (count / 2)) {
                 key->set(i);
             }
         }
-
-        // reset accumulators for next insert
-        accumulatorKey->sumSquaredError = 0;
-        accumulatorKey->accumulator->setAll(0);
-        accumulatorKey->count = 0;
     }
     
-    void updatePrototype(Node<AccumulatorKey>* childNode, T* parentKey) {
-        vector<int> weights;
-        if (!childNode->isLeaf()) {
-            for (auto child : childNode->getChildren()) {
-                weights.push_back(objCount(child));
+    void update(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            // leaves flatten accumulators in node
+            for (auto accumulatorKey : node->getKeys()) {
+                updatePrototypeFromAccumulator(accumulatorKey->key, 
+                        accumulatorKey->accumulator, accumulatorKey->count);
+            }
+        } else {
+            // internal nodes must gather accumulators from leaves
+            size_t dimensions = node->getKey(0)->key->size();
+            for (size_t i = 0; i < node->size(); i++) {
+                auto accumulatorKey = node->getKey(i);
+                T* key = accumulatorKey->key;
+                auto child = node->getChild(i);
+                ACCUMULATOR total(dimensions);
+                total.setAll(0);
+                uint64_t totalCount = 0;
+                gatherAccumulators(child, &total, &totalCount);
+                updatePrototypeFromAccumulator(key, &total, totalCount);
+            }
+            for (auto child : node->getChildren()) {
+                update(child);
             }
         }
-        vector<T*> childKeys;
-        for (auto accumulatorKey : childNode->getKeys()) {
-            childKeys.push_back(accumulatorKey->key);
-        }
-        _prototype(parentKey, childKeys, weights);
-    }    
-    
-    void update(Node<AccumulatorKey>* node, int depth) {
-        if (depth == 1) {
-            if (node->isLeaf()) {
-                for (auto accumulatorKey : node->getKeys()) {
-                    updatePrototypeFromAccumulators(accumulatorKey);
-                }
-            } else {
-                auto children = node->getChildren();
-                auto keys = node->getKeys();
-                for (int i = 0; i < children.size(); i++) {
-                    updatePrototype(children[i], keys[i]->key);
-                }
+    }
+
+    void clearAccumulators(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            for (auto accumulatorKey : node->getKeys()) {
+                accumulatorKey->sumSquaredError = 0;
+                accumulatorKey->accumulator->setAll(0);
+                accumulatorKey->count = 0;
             }
         } else {
             for (auto child : node->getChildren()) {
-                update(child, depth - 1);
-            }
+                clearAccumulators(child);
+            }            
         }
     }
-        
+       
     void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
             size_t dimensions = src->getKey(0)->size();
@@ -278,10 +309,6 @@ private:
                 auto child = src->getChild(i);
                 auto accumulatorKey = new AccumulatorKey();
                 accumulatorKey->key = new T(key);
-                accumulatorKey->sumSquaredError = 0;
-                accumulatorKey->accumulator = NULL;
-                accumulatorKey->count = 0;
-                accumulatorKey->mutex = NULL;
                 if (child->isLeaf()) {
                     // Do not copy leaves of original tree and setup
                     // accumulators for the lowest level cluster means.
@@ -291,6 +318,7 @@ private:
                     dst->add(accumulatorKey);
                 } else {
                     auto newChild = new Node<AccumulatorKey>();
+                    newChild->setOwnsKeys(true);
                     deepCopy(child, newChild);
                     dst->add(accumulatorKey, newChild);
                 }
@@ -353,6 +381,10 @@ private:
             return localCount;
         }
     }    
+
+    Node<AccumulatorKey>* _root;
+    DISTANCE _dist;
+    PROTOTYPE _prototype;  
 };
  
 #endif	/* STREAMINGEMTREE_H */

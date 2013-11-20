@@ -39,10 +39,6 @@ private:
     DistanceType _distF;
     ProtoType _protoF;
 
-    // Use this for splits instead of creating
-    // a new one every time a split is performed.
-    SplitResult<T> _splitR;
-
     // Use these containers so as not to create new ones
     // every time we split
     vector<T*> tempKeys;
@@ -64,7 +60,6 @@ private:
     int _updateDelay;
 
 public:
-
     KTree(int order, int clustererMaxiters) {
         _m = order;
         _root = new Node<T>(); // initial root is a leaf
@@ -74,6 +69,10 @@ public:
         _added = 0;
         _delayedUpdates = false;
         _updateDelay = 1000;
+    }
+    
+    ~KTree() {
+        delete _root;
     }
 
     void setUpdateDelay(int updateDelay) {
@@ -158,6 +157,7 @@ public:
             _root = new Node<T>();
             _root->add(result._key1, result._child1);
             _root->add(result._key2, result._child2);
+            _root->setOwnsKeys(true);
         }
         ++_added;
     }
@@ -443,6 +443,7 @@ private:
 
         // Create a 2nd node
         Node<T>* node2 = new Node<T>();
+        node2->setOwnsKeys(true);
 
         // Copy child nodes into a temp storage vector
 

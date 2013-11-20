@@ -1,7 +1,8 @@
 // EMTree.cpp : Defines the entry point for the console application.
 //
 
-#include "Funcs.h"
+#include "Distance.h"
+#include "Prototype.h"
 #include "SVector.h"
 #include "Cluster.h"
 #include "Clusterer.h"
@@ -61,7 +62,7 @@ void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
     // EMTree
     int depth = 3;
     int iters = 2;
-    vector<int> nodeSizes = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    vector<int> nodeSizes = {10};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
         TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, iters);
@@ -76,7 +77,7 @@ void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
 void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
     // EMTree
     int depth = 3;
-    int iters = 10;
+    int iters = 2;
     vector<int> nodeSizes = {30}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
@@ -119,7 +120,7 @@ void sigKTreeCluster(vector<SVector<bool>*> &vectors) {
     ClusterCounter<nodeType> counter;
 
     // KTree algorithm
-    int order = 100;
+    int order = 10;
     int maxiters = 2;
     KTree<vecType, clustererType, distanceType, protoType> kt(order, maxiters);
 
@@ -270,10 +271,9 @@ int main(int argc, char** argv) {
 
 
     
-    streamingEMTree();
-
-/*
-    if (false) {
+    if (true) {
+        streamingEMTree();
+    } else if (false) {
         clueweb();
     } else {
         // load data
@@ -293,10 +293,11 @@ int main(int argc, char** argv) {
 
         // run experiments
         if (!vectors.empty() && !subset.empty()) {
+            //sigKmeansCluster(subset, "subset_clusters.txt");
             //journalPaperExperiments(subset);
-            //sigKTreeCluster(vectors);
-            //sigTSVQCluster(vectors);
-            sigEMTreeCluster(vectors);
+            //sigKTreeCluster(subset);
+            //sigTSVQCluster(subset);
+            sigEMTreeCluster(subset);
             //testHistogram(vectors);
             //testMeanVersusNNSpeed(vectors);
             //testReadVectors();
@@ -304,8 +305,11 @@ int main(int argc, char** argv) {
         } else {
             cout << "error - vectors or subset empty" << endl;
         }
+        
+        for (auto v : vectors) {
+            delete v;
+        }
     }
- */
     
     return EXIT_SUCCESS;
 }

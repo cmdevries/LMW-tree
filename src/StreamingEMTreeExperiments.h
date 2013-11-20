@@ -12,7 +12,7 @@ typedef meanBitPrototype2 protoType;
 typedef Node<vecType> nodeType;
 typedef RandomSeeder<vecType> seederType;
 typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-typedef SVector<int> ACCUMULATOR;
+typedef SVector<uint32_t> ACCUMULATOR;
 
 typedef StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> StreamingEMTree_t;
 
@@ -96,7 +96,7 @@ void streamingEMTree() {
     }
 
     // streaming EMTree
-    const int maxIters = 10;
+    const int maxIters = 2;
     StreamingEMTree_t* emtree = streamingEMTreeInit();
     cout << endl << "Streaming EM-tree:" << endl;
     for (int i = 0; i < maxIters - 1; i++) {

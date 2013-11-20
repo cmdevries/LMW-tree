@@ -1,64 +1,33 @@
-#ifndef FUNCS_H
-#define FUNCS_H
+/**
+ * This file contains PROTOTYPE functions. It summarizes a list of objects into
+ * a single object. It also takes weights for each object into account.
+ * 
+ * It works on objects of type T.
+ * 
+ * The PROTOTYPE function is called with a pointer to the result, a list of
+ * object and a list of weights.
+ * 
+ * The only required operation is,
+ *      void operator()(T* result, vector<T*> objects, vector<int> weights)
+ * 
+ * Note that weights can be empty if no weights are present, otherwise the 
+ * number of objects must match the number of weights,
+ *      assert(objects.size() == weight.size())
+ * 
+ * For example, floating point vectors can use the mean or median, and bit
+ * vectors use a specialized prototype optimized for speed. 
+ */
 
-#include <atomic>
+#ifndef PROTOTYPE_H
+#define	PROTOTYPE_H
 
-#include "Clusterer.h"
-#include "SVector.h"
-#include "Node.h"
+#include <vector>
+
 #include "BitMapList8.h"
 #include "BitMapList16.h"
+#include "SVector.h"
 
-#include "tbb/task_scheduler_init.h"
-#include "tbb/parallel_for.h"
-#include "tbb/blocked_range.h"
-
-
-using std::atomic;
-
-
-template <typename T>
-struct euclideanDistance {
-
-	float operator()(T *t1, T *t2) const {
-	
-		typename T::iterator it1 = t1->begin();
-		typename T::iterator it2 = t2->begin();
-
-		float d, sum = 0.0f;
-
-		for (it1 = t1->begin(), it2 = t2->begin(); it1 != t1->end(), it2 != t2->end(); 
-			it1++, it2++) {
-
-			d = *it1 - *it2;			
-			sum = sum + (d*d);
-		}
-
-		return sqrt(sum);
-	}
-};
-
-template <typename T>
-struct euclideanDistanceSq {
-
-	float operator()(T *t1, T *t2) const {
-	
-		typename T::iterator it1 = t1->begin();
-		typename T::iterator it2 = t2->begin();
-
-		float d, sum = 0.0f;
-
-		for (it1 = t1->begin(), it2 = t2->begin(); it1 != t1->end(), it2 != t2->end(); 
-			it1++, it2++) {
-
-			d = *it1 - *it2;			
-			sum = sum + (d*d);
-		}
-
-		return sum;
-	}
-};
-
+using namespace std;
 
 template <typename T>
 struct meanPrototype {
@@ -88,25 +57,16 @@ struct meanPrototype {
 
 
 struct meanBitPrototype {
-
-	// We define this variable as a member variable instead of
-	// creating it new each time operator() is called.
-	// 65536 is an arbitrary size.
-	//int *bitCountPerDimension;
-
 	meanBitPrototype() {
-		//bitCountPerDimension = new int[65536];
 	}
 
 	~meanBitPrototype() {
-		//delete[] bitCountPerDimension;
 	}
 
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
 
-		int bitCountPerDimension[65536];
-
+            int bitCountPerDimension[65536];
 		block_type *data = t1->getData();;
 		int vecSize = t1->size();
 		int dataSize = sizeof(data[0]) * 8;
@@ -169,27 +129,19 @@ struct meanBitPrototype2 {
 	//int numSteps;
 	unsigned short val;
 
-	// We define this variable as a member variable instead of
-	// creating it new each time operator() is called.
-	// 65536 is an arbitrary size.
-	//int *bitCountPerDimension;
-
 	meanBitPrototype2() {
-		//bitCountPerDimension = new int[65536];
 		bMap.initialise();
 	}
 
 	~meanBitPrototype2() {
-		//delete[] bitCountPerDimension;
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
 
+            int bitCountPerDimension[65536];
 		unsigned short val;
-
-		int bitCountPerDimension[65536];
 
 		block_type *data = t1->getData();
 		int vecSize = t1->size();
@@ -279,24 +231,18 @@ struct meanBitPrototype8 {
 	
 	BitMapList8 bMap;
 
-	// We define this variable as a member variable instead of
-	// creating it new each time operator() is called.
-	// 65536 is an arbitrary size.
-	int *bitCountPerDimension;
-
 	meanBitPrototype8() {
-		bitCountPerDimension = new int[65536];
 		bMap.initialise();
 	}
 
 	~meanBitPrototype8() {
-		delete[] bitCountPerDimension;
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
 
+            int bitCountPerDimension[65536];
 		unsigned short val;
 
 		block_type *data = t1->getData();
@@ -396,208 +342,5 @@ struct meanBitPrototype8 {
 	
 };
 
-
-struct hammingDistance {
-
-	float operator()(SVector<bool> *v1, SVector<bool> *v2) const {
-	
-		return SVector<bool>::hammingDistance( *v1,  *v2);
-
-	}
-};
-
-
-//---------------------------------
-// Function object for use with TBB
-
-template <typename T, typename DTYPE>
-struct VecToCentroid {
-
-	vector<T*>& _data;
-	vector<T*>& _centroids;
-	vector<size_t>& _nearestCentroid;
-
-	DTYPE _distF;
-
-	atomic<bool> *_converged;
-
-public:
-
-	void operator()(const tbb::blocked_range<size_t>& r) const {
-
-		int nearest;
-
-		for (size_t i = r.begin(); i != r.end(); i++) {
-			nearest = nearestObj(_data[i]);
-			if (nearest != _nearestCentroid[i]) {
-				*_converged = false;
-			}
-			_nearestCentroid[i] = nearest;
-		}
-	}
-
-	size_t nearestObj(T *obj) const {
-
-		size_t nearest = 0;
-		float dist;
-		float nearestDistance = _distF(obj, _centroids[0]);
-
-		for (size_t i = 1; i < _centroids.size(); ++i) {
-			dist = _distF(obj, _centroids[i]);
-			if (dist < nearestDistance) {
-				nearestDistance = dist;
-				nearest = i;
-			}
-		}
-
-		return nearest;
-	}
-
-	VecToCentroid(vector<T*>& centroids, vector<T*>& data, vector<size_t>& nearestCentroid, atomic<bool> *converged) :
-		_centroids(centroids),
-		_data(data),
-		_nearestCentroid(nearestCentroid),
-		_converged(converged)
-	{
-
-	}
-};
-
-
-template <typename T, typename PTYPE>
-struct UpdateCentroid {
-
-	vector<int>& _weights;
-	// Should this be a reference?
-	vector<Cluster<T>*> &_clusters;
-
-
-
-public:
-
-	void operator()(const tbb::blocked_range<size_t>& r) const {
-
-
-		PTYPE _protoF;
-
-		Cluster<T>* c;
-		int count;
-
-		for (size_t i = r.begin(); i != r.end(); i++) {
-
-			cout << endl << i << "  ";
-
-			c = _clusters[i];
-			count = (int)(c->size());
-
-			cout << count;
-
-			if (count > 0) {
-				_protoF(c->getCentroid(), c->getNearestList(), _weights);
-			}
-		}
-	}
-
-	UpdateCentroid(vector<Cluster<T>*> &clusters, vector<int>& weights) : 
-		_clusters(clusters), 
-		_weights(weights)
-	{
-
-	}
-
-};
-
-/*
-template <typename VEC_TYPE, typename CLUSTERER_TYPE>
-class ClustererTask : public tbb::task {
-
-public:
-	
-	const Node<VEC_TYPE> *_current;
-	const int _m;
-	const int _depth;
-	const int _maxIters;
-
-	ClustererTask(Node<VEC_TYPE>* current, int order, int depth, int maxiters) : 
-		_current(current),
-		_m(order), 
-		_depth(depth),
-		_maxIters(maxiters)
-	{
-	
-	}
-
-
-	task* execute() {      // Overrides virtual function task::execute
-
-		ClustererType _clusterer;
-		_clusterer.setNumClusters(_m);
-		_clusterer.setMaxIters(_maxIters);
-		
-		vector<Cluster<T>*> clusters = _clusterer.cluster(_current->getKeys());
-		_current->clearKeysAndChildren();
-		
-		for (Cluster<T>* c : clusters) {
-			Node<T>* child = new Node<T>();
-			child->addAll(c->getNearestList());
-			current->add(c->getCentroid(), child);
-		}
-
-		// All the compute tasks in this part of the tree
-		vector<ClustererTask*> tasks;
-
-		if (depth > 1) {
-			
-			for (Node<T>* n : current->getChildren()) {
-				
-				tasks.push_back(new(allocate_child()) FibTask(n - 1, &x);)
-			}
-
-			cluster(n, depth - 1);
-		}
-
-
-		if (depth == 1) {
-			return;
-		}
-		else {
-			vector<Cluster<T>*> clusters = _clusterer.cluster(current->getKeys());
-			current->clearKeysAndChildren();
-			for (Cluster<T>* c : clusters) {
-				Node<T>* child = new Node<T>();
-				child->addAll(c->getNearestList());
-				current->add(c->getCentroid(), child);
-			}
-			for (Node<T>* n : current->getChildren()) {
-				cluster(n, depth - 1);
-			}
-		}
-
-		long x, y;
-		FibTask& a = *new(allocate_child()) FibTask(n - 1, &x);
-		FibTask& b = *new(allocate_child()) FibTask(n - 2, &y);
-		
-		// Set ref_count to 'two children plus one for the wait".
-		set_ref_count(3);
-		
-		// Start b running.
-		spawn(b);
-		
-		// Start a running and wait for all children (a and b).
-		spawn_and_wait_for_all(a);
-		
-		// Do the sum
-			*sum = x + y;
-		
-		return NULL;
-	}
-};
-*/
-
-
-
-#endif
-
-
-
+#endif	/* PROTOTYPE_H */
 
