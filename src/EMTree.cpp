@@ -1,7 +1,8 @@
 // EMTree.cpp : Defines the entry point for the console application.
 //
 
-#include "Funcs.h"
+#include "Distance.h"
+#include "Prototype.h"
 #include "SVector.h"
 #include "Cluster.h"
 #include "Clusterer.h"

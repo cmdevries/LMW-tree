@@ -6,6 +6,8 @@
 #include "Seeder.h"
 #include "StdIncludes.h"
 #include "tbb/atomic.h"
+#include "tbb/blocked_range.h"
+#include "tbb/parallel_for.h"
 
 template <typename T, typename SeederType, typename DistanceType, typename ProtoType>
 class KMeans : public Clusterer<T> {
