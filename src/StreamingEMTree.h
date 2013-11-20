@@ -7,6 +7,22 @@
 #include "tbb/pipeline.h"
 
 /**
+ * Visits all the clusters in a Streaming EM-tree along the insertion path.
+ */
+template <typename T>
+class InsertVisitor {
+public:
+    InsertVisitor() { }
+    virtual ~InsertVisitor() { }
+    
+    /**
+     * Must be thread safe. It can be called from multiple threads.
+     */
+    virtual void accept(T* clusterCenter, int level, double RMSE,
+            uint64_t objectCount) = 0;
+};
+
+/**
  * The streaming version of the EM-tree algorithm does not store the
  * data vectors in the tree. Therefore, the leaf level in the tree contain
  * cluster representatives.
@@ -46,13 +62,33 @@ public:
     size_t insert(SVectorStream<T>& vs) {
         // maximum number of readsize vector chunks that can be loaded at once
         const int maxtokens = 1024;
-        tbb::pipeline pipeline;
-        InputFilter inputFilter(&vs);
-        pipeline.add_filter(inputFilter);
-        InsertFilter insertFilter(&vs, this);
-        pipeline.add_filter(insertFilter);
-        pipeline.run(maxtokens);
-        return inputFilter.read();
+        const int readsize = 1000;
+        size_t totalRead = 0;
+        tbb::parallel_pipeline(maxtokens,
+                tbb::make_filter<void, vector < SVector<bool>*>*>(
+                tbb::filter::serial_out_of_order,
+                [&] (tbb::flow_control& fc) -> vector < SVector<bool>*>* {
+                    auto data = new vector<T*>;
+                    size_t read = vs.read(readsize, data);
+                    if (read == 0) {
+                        delete data;
+                        fc.stop();
+                        return NULL;
+                    }
+                    totalRead += data->size();
+                    return data;
+                }
+        ) &
+        tbb::make_filter < vector < SVector<bool>*>*, void>(
+                tbb::filter::parallel,
+                [&] (vector < SVector<bool>*>* data) -> void {
+                    insert(*data);
+                    vs.free(data);
+                    delete data;
+                }
+        )
+        );
+        return totalRead;
     }
     
     /**
@@ -94,69 +130,6 @@ public:
     }
 
 private:
-    /**
-     * serial TBB Filter for reading from stream
-     */
-    class InputFilter : public tbb::filter {
-    public:
-        InputFilter(SVectorStream<T>* vs, size_t readsize = 1000) :
-        filter(serial_out_of_order),
-        _vs(vs),
-        _readsize(readsize),
-        _read(0) {
-        }
-
-        ~InputFilter() {
-        }
-
-        size_t read() {
-            return _read;
-        }
-
-    private:
-        void* operator()(void*) {
-            auto data = new vector<T*>;
-            size_t read = _vs->read(_readsize, data);
-            if (read == 0) {
-                delete data;
-                return NULL;
-            }
-            _read += data->size();
-            return data;
-        }
-        
-        SVectorStream<T>* _vs;
-        size_t _readsize;
-        size_t _read;        
-    };
-
-    /**
-     * Parallel TBB Filter for inserting into Streaming EM-tree.
-     */    
-    class InsertFilter : public tbb::filter {
-    public:
-        InsertFilter(SVectorStream<T>* vs, StreamingEMTree* emtree) :
-        filter(parallel),
-        _vs(vs),
-        _emtree(emtree) {
-        }
-
-        ~InsertFilter() {
-        }
-
-    private:
-        void* operator()(void* item) {
-            auto data = (vector<T*>*)item;
-            _emtree->insert(*data);
-            _vs->free(data);
-            delete data;
-            return NULL;
-        }
-        
-        SVectorStream<T>* _vs;
-        StreamingEMTree* _emtree;        
-    };
-
     typedef tbb::mutex Mutex;
     
     struct AccumulatorKey {
