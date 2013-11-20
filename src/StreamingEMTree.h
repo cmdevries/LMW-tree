@@ -60,14 +60,16 @@ public:
     }
 
     size_t insert(SVectorStream<T>& vs) {
-        // maximum number of readsize vector chunks that can be loaded at once
-        const int maxtokens = 1024;
         const int readsize = 1000;
+        const int maxtokens = 1024; // maximum number of readsize vector chunks that can be loaded at once
         size_t totalRead = 0;
+        
+        // setup parallel processing pipeline
         tbb::parallel_pipeline(maxtokens,
+                // Input filter reads readsize chunks of vectors in serial
                 tbb::make_filter<void, vector < SVector<bool>*>*>(
                 tbb::filter::serial_out_of_order,
-                [&] (tbb::flow_control& fc) -> vector < SVector<bool>*>* {
+                [&] (tbb::flow_control & fc) -> vector < SVector<bool>*>* {
                     auto data = new vector<T*>;
                     size_t read = vs.read(readsize, data);
                     if (read == 0) {
@@ -79,15 +81,17 @@ public:
                     return data;
                 }
         ) &
+        // Insert filter inserts readsize chunks of vectors into streaming EM-tree in parallel
         tbb::make_filter < vector < SVector<bool>*>*, void>(
                 tbb::filter::parallel,
                 [&] (vector < SVector<bool>*>* data) -> void {
                     insert(*data);
                     vs.free(data);
-                    delete data;
+                            delete data;
                 }
         )
         );
+        
         return totalRead;
     }
     
