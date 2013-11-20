@@ -1,6 +1,8 @@
 #ifndef FUNCS_H
 #define FUNCS_H
 
+#include <atomic>
+
 #include "Clusterer.h"
 #include "SVector.h"
 #include "Node.h"
@@ -10,6 +12,10 @@
 #include "tbb/task_scheduler_init.h"
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
+
+
+using std::atomic;
+
 
 template <typename T>
 struct euclideanDistance {
@@ -86,18 +92,20 @@ struct meanBitPrototype {
 	// We define this variable as a member variable instead of
 	// creating it new each time operator() is called.
 	// 65536 is an arbitrary size.
-	int *bitCountPerDimension;
+	//int *bitCountPerDimension;
 
 	meanBitPrototype() {
-		bitCountPerDimension = new int[65536];
+		//bitCountPerDimension = new int[65536];
 	}
 
 	~meanBitPrototype() {
-		delete[] bitCountPerDimension;
+		//delete[] bitCountPerDimension;
 	}
 
 	void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs, 
 		vector<int> &weights) const {
+
+		int bitCountPerDimension[65536];
 
 		block_type *data = t1->getData();;
 		int vecSize = t1->size();
@@ -164,15 +172,15 @@ struct meanBitPrototype2 {
 	// We define this variable as a member variable instead of
 	// creating it new each time operator() is called.
 	// 65536 is an arbitrary size.
-	int *bitCountPerDimension;
+	//int *bitCountPerDimension;
 
 	meanBitPrototype2() {
-		bitCountPerDimension = new int[65536];
+		//bitCountPerDimension = new int[65536];
 		bMap.initialise();
 	}
 
 	~meanBitPrototype2() {
-		delete[] bitCountPerDimension;
+		//delete[] bitCountPerDimension;
 	}
 	
 	// We assume that the length of bit vectors is less than 65536 and greater than 0.
@@ -180,6 +188,8 @@ struct meanBitPrototype2 {
 		vector<int> &weights) const {
 
 		unsigned short val;
+
+		int bitCountPerDimension[65536];
 
 		block_type *data = t1->getData();
 		int vecSize = t1->size();
@@ -408,7 +418,8 @@ struct VecToCentroid {
 	vector<size_t>& _nearestCentroid;
 
 	DTYPE _distF;
-	bool *_converged;
+
+	atomic<bool> *_converged;
 
 public:
 
@@ -442,7 +453,7 @@ public:
 		return nearest;
 	}
 
-	VecToCentroid(vector<T*>& centroids, vector<T*>& data, vector<size_t>& nearestCentroid, bool *converged) :
+	VecToCentroid(vector<T*>& centroids, vector<T*>& data, vector<size_t>& nearestCentroid, atomic<bool> *converged) :
 		_centroids(centroids),
 		_data(data),
 		_nearestCentroid(nearestCentroid),
@@ -460,18 +471,26 @@ struct UpdateCentroid {
 	// Should this be a reference?
 	vector<Cluster<T>*> &_clusters;
 
-	PTYPE _protoF;
+
 
 public:
 
 	void operator()(const tbb::blocked_range<size_t>& r) const {
 
+
+		PTYPE _protoF;
+
 		Cluster<T>* c;
 		int count;
 
 		for (size_t i = r.begin(); i != r.end(); i++) {
+
+			cout << endl << i << "  ";
+
 			c = _clusters[i];
 			count = (int)(c->size());
+
+			cout << count;
 
 			if (count > 0) {
 				_protoF(c->getCentroid(), c->getNearestList(), _weights);

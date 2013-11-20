@@ -13,6 +13,7 @@
 #include <deque>
 #include <algorithm>
 #include <stdexcept>
+#include <atomic>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>

@@ -230,7 +230,8 @@ private:
             c->clearNearest();
         }
 
-        bool converged = true;
+        atomic<bool> converged = true;
+
 		size_t dataCount = data.size();
 
 		//--------------
@@ -273,7 +274,7 @@ private:
 
 		UpdateCentroid<T, ProtoType> uc(_clusters, weights);
 
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 2), uc);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, _clusters.size(), 10), uc);
 
     }
 
