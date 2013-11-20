@@ -49,7 +49,7 @@ private:
     float _eps = 0.00001f;
     
     // has the clustering converged
-    atomic<bool> _converged;
+    std::atomic<bool> _converged;
 
 public:
 
