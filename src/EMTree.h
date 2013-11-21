@@ -6,7 +6,7 @@
 #include "Node.h"
 
 
-template <typename T, typename CLUSTERER, typename DISTANCE, typename PROTOTYPE>
+template <typename T, typename CLUSTERER, typename OPTIMIZER>
 class EMTree {
 public:
 
@@ -177,35 +177,24 @@ public:
 private:
 
     double RMSE() {
-        double RMSE = sumSquaredError(NULL, _root);
+        double SSE = sumSquaredError(NULL, _root);
         uint64_t size = getObjCount();
-        RMSE /= size;
-        RMSE = sqrt(RMSE);
-        return RMSE;
+        return sqrt(SSE / size);
     }
 
     double sumSquaredError(T* parentKey, Node<T> *child) {
-
         double distance = 0.0;
-        double dis;
-
         if (child->isLeaf()) {
-            vector<T*> &keys = child->getKeys();
-            for (T* key : keys) {
-                dis = _distF(key, parentKey);
-                distance += dis * dis;
+            if (parentKey) { // NULL if root node is leaf
+                distance += _optimizer.sumSquaredError(parentKey, child->getKeys());
             }
         } else {
-            int numEntries = child->size();
-
             vector<T*> &keys = child->getKeys();
             vector<Node<T>*> &children = child->getChildren();
-
-            for (int i = 0; i < numEntries; i++) {
+            for (int i = 0; i < child->size(); i++) {
                 distance += sumSquaredError(keys[i], children[i]);
             }
         }
-
         return distance;
     }
 
@@ -280,23 +269,6 @@ private:
         }
     }
 
-    size_t nearestChild(T *obj, vector<T*> &others) {
-
-        size_t nearest = 0;
-        float dist;
-        float nearestDistance = _distF(obj, others[0]);
-
-        for (size_t i = 1; i < others.size(); ++i) {
-            dist = _distF(obj, others[i]);
-            if (dist < nearestDistance) {
-                nearestDistance = dist;
-                nearest = i;
-            }
-        }
-
-        return nearest;
-    }
-
     int prune(Node<T>* n) {
         if (n->isLeaf()) {
             return 0; // non-empty leaf node
@@ -335,67 +307,44 @@ private:
         }
     }
 
+    Node<T>* nearestChild(Node<T>* n, T* vec) {
+        vector<T*>& keys = n->getKeys();
+        vector<Node<T>*>& children = n->getChildren();
+        size_t nearest = _optimizer.nearestIndex(vec, keys);
+        return children[nearest];
+    }
+
     void pushDownNoUpdate(Node<T> *n, T *vec) {
-
-        //std::cout << "\n\tPushing down (no update) ...";
-
         if (n->isLeaf()) {
             n->add(vec); // Finished
         } else { // It is an internal node.
-            // recurse via nearest neighbour cluster
-
-            vector<T*>& keys = n->getKeys();
-            vector<Node<T>*>& children = n->getChildren();
-
-            size_t nearest = nearestChild(vec, keys);
-            Node<T> *nearestChild = children[nearest];
-
-            pushDownNoUpdate(nearestChild, vec);
+            // recurse via nearest neighbor cluster
+            pushDownNoUpdate(nearestChild(n, vec), vec);
         }
     }
     
     void pushDownNoUpdateInternal(Node<T> *n, T* key, Node<T>* child, int depth) {
-
-        //std::cout << "\n\tPushing down (no update) ...";
-
         if (depth == 1) {
             n->add(key, child); // Finished
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
-
-            vector<T*>& keys = n->getKeys();
-            vector<Node<T>*>& children = n->getChildren();
-
-            size_t nearest = nearestChild(key, keys);
-            Node<T> *nearestChild = children[nearest];
-
-            pushDownNoUpdateInternal(nearestChild, key, child, depth - 1);
+            pushDownNoUpdateInternal(nearestChild(n, key), key, child, depth - 1);
         }
-    }
-    
+    }    
 
     // Update the protype parentKey
-
     void updatePrototype(Node<T> *child, T* parentKey) {
-
-        //cout << "\nUpdating mean ...";
-
-        //int[] weights = new int[count];
         weights.clear();
-
         if (!child->isLeaf()) {
             vector<Node<T>*>& children = child->getChildren();
-
             for (size_t i = 0; i < children.size(); i++) {
                 weights.push_back(objCount(children[i]));
             }
         }
-
-        _protoF(parentKey, child->getKeys(), weights);
+        _optimizer.updatePrototype(parentKey, child->getKeys(), weights);
     }
 
     void removeData(Node<T> *n, vector<T*> &data) {
-
         if (n->isLeaf()) {
             n->removeData(data);
         } else {
@@ -423,8 +372,7 @@ private:
     // The root of the tree.
     Node<T> *_root;
 
-    DISTANCE _distF;
-    PROTOTYPE _protoF;
+    OPTIMIZER _optimizer;
 
     vector<T*> removed;
     vector<Node<T>*> removedChildren;

@@ -29,18 +29,14 @@ struct Maximize {
     }
 };
 
-template <typename T, typename DISTANCE, typename COMPARATOR>
+template <typename T, typename DISTANCE, typename COMPARATOR, typename PROTOTYPE>
 class Optimizer {
 public:
-    
-    double sumSquaredError(T* object, vector<T*>& others) {
-        double SSE = 0;
-        for (auto otherObject : others) {
-            SSE += _distance.squared(object, otherObject);
-        }
-        return SSE;
+        
+    void updatePrototype(T* prototype, vector<T*>& neighbours, vector<int>& weights) {
+        _prototype(prototype, neighbours, weights);
     }
-      
+    
     T* nearest(T* object, vector<T*>& others) {
         double nearestDistance = 0;
         size_t nearestIndex = 0;
@@ -58,6 +54,14 @@ public:
         nearest(object, others, &nearestDistance, &nearestIndex);
         return nearestIndex;
     }
+    
+    double sumSquaredError(T* object, vector<T*>& others) {
+        double SSE = 0;
+        for (auto otherObject : others) {
+            SSE += _distance.squared(object, otherObject);
+        }
+        return SSE;
+    }    
 
 private:
     T* nearest(T* object, vector<T*>& others, double* nearestDistance, size_t* nearestIndex) {
@@ -75,6 +79,7 @@ private:
     
     COMPARATOR _comp;
     DISTANCE _distance;
+    PROTOTYPE _prototype;
 };
 
 #endif	/* OPTIMIZER_H */

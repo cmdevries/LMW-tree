@@ -6,8 +6,8 @@ typedef hammingDistance distanceType;
 typedef meanBitPrototype2 protoType;
 typedef Node<vecType> nodeType;
 typedef RandomSeeder<vecType> seederType;
-typedef Optimizer<vecType, distanceType, Minimize> OPTIMIZER;
-typedef KMeans<vecType, seederType, OPTIMIZER, protoType> clustererType;
+typedef Optimizer<vecType, distanceType, Minimize, protoType> OPTIMIZER;
+typedef KMeans<vecType, seederType, OPTIMIZER> clustererType;
 typedef SVector<uint32_t> ACCUMULATOR;
 typedef StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> StreamingEMTree_t;
 

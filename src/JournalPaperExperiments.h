@@ -132,7 +132,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                         splits.push_back(m);
                     }
                     boost::timer::auto_cpu_timer all;
-                    EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                    EMTree<vecType, clustererType, OPTIMIZER> emt(m);
                     if (maxiters == 0) {
                         // no iterations so dont update means
                         bool updateMeans = false;
@@ -214,7 +214,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                         splits.push_back(m);
                     }
                     boost::timer::auto_cpu_timer all;
-                    EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                    EMTree<vecType, clustererType, OPTIMIZER> emt(m);
                     // seeding does first iteration
                     emt.seed(vectors, splits);
                     for (int i = 1; i < maxiters; ++i) {
@@ -299,7 +299,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                     splits.push_back(m);
                 }
                 boost::timer::auto_cpu_timer all;
-                EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                EMTree<vecType, clustererType, OPTIMIZER> emt(m);
                 // seeding does first iteration
                 emt.seed(vectors, splits);
                 for (int i = 1; i < maxiters; ++i) {
@@ -504,7 +504,7 @@ void clueweb() {
         int m = (int)sqrt(clusters);        
         deque<int> splits = {m, m};
         boost::timer::auto_cpu_timer all;
-        EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+        EMTree<vecType, clustererType, OPTIMIZER> emt(m);
         // seeding does first iteration
         {
             cout << "----" << endl;
@@ -570,7 +570,7 @@ void clueweb() {
         
         // 2 iterations of EM-tree on all data, using TSVQ sample as seed
         int emtreeMaxiters = 2;
-        EMTree<vecType, clustererType, distanceType, protoType> emtree(tsvq.getMWayTree());
+        EMTree<vecType, clustererType, OPTIMIZER> emtree(tsvq.getMWayTree());
         boost::timer::auto_cpu_timer emtreeTimer;
         {
             boost::timer::auto_cpu_timer iter;
