@@ -6,39 +6,14 @@
 #include "Node.h"
 
 
-template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
+template <typename T, typename CLUSTERER, typename DISTANCE, typename PROTOTYPE>
 class EMTree {
-private:
-
-    // The order of this tree
-    int _m;
-
-    // The root of the tree.
-    Node<T> *_root;
-
-    ClustererType _clusterer;
-
-    DistanceType _distF;
-    ProtoType _protoF;
-
-    vector<T*> removed;
-    vector<Node<T>*> removedChildren;
-
-    // Weights for prototype function (we don't have to use these)
-    vector<int> weights;
-
 public:
 
-    EMTree(int order) {
-        _m = order;
-        _root = new Node<T>(); // initial root is a leaf
-        _clusterer.setNumClusters(_m);
-        _clusterer.setMaxIters(1);
+    EMTree(int order) : _m(order), _root(new Node<T>()) {
     }
     
-    EMTree(Node<T>* root) {
-        _m = -1;
-        _root = root;
+    EMTree(Node<T>* root) : _m(-1), _root(root) {
     }    
     
     ~EMTree() {
@@ -70,27 +45,30 @@ public:
     }
 
     void seed(vector<T*> &data, int depth) {
-        // make the root a leaf containing all data
-        _root->addAll(data);
-        seed(_root, depth);
+        deque<int> splits;
+        for (int i = 0; i < depth; i++) {
+            splits.push_back(_m);
+        }
+        seed(data, splits);
     }
 
-    void seedSingleThreaded(vector<T*> &data, deque<int> splits, bool updateMeans = true) {
+    void seed(vector<T*> &data, deque<int> splits, bool updateMeans = true) {
+        CLUSTERER clusterer(_m);
         _root->addAll(data);
         if (updateMeans) {
-            _clusterer.setMaxIters(1);
+            clusterer.setMaxIters(1);
         } else {
-            _clusterer.setMaxIters(0);
+            clusterer.setMaxIters(0);
         }
-        seedSingleThreaded(_root, splits);
+        seed(_root, splits, clusterer);
     }
     
-    void seedSingleThreaded(Node<T>* current, deque<int> splits) {
+    void seed(Node<T>* current, deque<int> splits, CLUSTERER& clusterer) {
         if (splits.empty()) {
             return;
         } else {
-            _clusterer.setNumClusters(splits[0]);
-            vector<Cluster<T>*> clusters = _clusterer.cluster(current->getKeys());
+            clusterer.setNumClusters(splits[0]);
+            vector<Cluster<T>*> clusters = clusterer.cluster(current->getKeys());
             current->clearKeysAndChildren();
             for (Cluster<T>* c : clusters) {
                 Node<T>* child = new Node<T>();
@@ -100,12 +78,9 @@ public:
             current->setOwnsKeys(true);
             splits.pop_front();
             for (Node<T>* n : current->getChildren()) {
-                seedSingleThreaded(n, splits);
+                seed(n, splits, clusterer);
             }
         }   
-    }
-
-    void seed(Node<T>* current, int depth) {
     }
 
     void EMStep() {
@@ -441,6 +416,21 @@ private:
             }
         }
     }
+    
+    // The order of this tree
+    int _m;
+
+    // The root of the tree.
+    Node<T> *_root;
+
+    DISTANCE _distF;
+    PROTOTYPE _protoF;
+
+    vector<T*> removed;
+    vector<Node<T>*> removedChildren;
+
+    // Weights for prototype function (we don't have to use these)
+    vector<int> weights;    
 };
 
 

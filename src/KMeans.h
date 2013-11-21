@@ -9,76 +9,25 @@
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_for.h"
 
-template <typename T, typename SeederType, typename DistanceType, typename ProtoType>
+template <typename T, typename SEEDER, typename OPTIMIZER, typename PROTOTYPE>
 class KMeans : public Clusterer<T> {
-private:
-
-    // Seeder
-    SeederType *_seeder;
-
-    DistanceType _distF;
-    ProtoType _protoF;
-    
-    // enforce the number of clusters required
-    // if less than k clusters are produced, shuffle vectors randomly and split into k cluster
-    bool _enforceNumClusters = false;
-
-    // present number of iterations
-    int _iterCount = 0;
-
-    // maximum number of iterations
-    // -1 - run until complete convergence
-    // 0 - only assign nearest neighbors after seeding
-    // >= 1 - perform this many iterations
-    int _maxIters = 100;
-
-    // How many clusters should be found? i.e. k
-    int _numClusters = 0;
-
-    vector<T*> _centroids;
-    vector<Cluster<T>*> _clusters;
-    vector<Cluster<T>*> _finalClusters;
-
-    // The centroid index for each vector. Aligned with vectors member variable.
-    vector<size_t> _nearestCentroid;
-
-    // Weights for prototype function (we don't have to use these)
-    vector<int> _weights;
-
-    // Residual for convergence
-    float _eps = 0.00001f;
-    
-    // has the clustering converged
-    std::atomic<bool> _converged;
-
 public:
 
-    //KMeans(Seeder *seeder, int numClusters) {
-
-    KMeans() {
-        _seeder = new SeederType();
+    KMeans(int numClusters) : _numClusters(numClusters), _seeder(new SEEDER()) {
     }
 
-	KMeans(int numClusters) : _numClusters(numClusters) {
-        _seeder = new SeederType();
+    KMeans(int numClusters, float eps) : _numClusters(numClusters), _eps(eps),
+            _seeder(new SEEDER()) {
     }
-
-	KMeans(int numClusters, float eps) : 
-		_numClusters(numClusters), 
-		_eps(eps) 
-	{
-		_seeder = new SeederType();
-		_maxIters = 100;
-	}
 
     ~KMeans() {
         // Need to clean up any created cluster objects
         Utils::purge(_clusters);
     }
 
-    vector<size_t>& getNearestCentroids() {
-        return _nearestCentroid;
-    }
+    //vector<size_t>& getNearestCentroids() {
+    //    return _nearestCentroid;
+    //}
 
     void setNumClusters(size_t numClusters) {
         _numClusters = numClusters;
@@ -105,19 +54,21 @@ public:
         return _finalClusters;
     }
     
-    float getRMSE(vector<T*> &data) {
-        float rmse = 0;
-        for (size_t i = 0; i < data.size(); ++i) {
-            // Need to change this in future to use an error function
-            float e = _distF(data[i], _centroids[_nearestCentroid[i]]);
-            rmse += e*e;
+    /**
+     * pre: cluster() has been called
+     */
+    double getRMSE() {
+        double SSE = 0;
+        size_t objects = 0;
+        for (Cluster<T>* cluster : _clusters) {
+            auto neighbours = cluster->getNearestList();
+            objects += neighbours.size();
+            SSE += _optimizer.sumSquaredError(cluster->getCentroid(), neighbours);
         }
-        rmse /= data.size();
-        return (float) sqrt(rmse);
+        return sqrt(SSE / objects);
     }
 
 private:
-
     void finalizeClusters(vector<T*> &data) {      
         // Create list of final clusters to return;
         bool emptyCluster = assignClusters(data);
@@ -169,8 +120,6 @@ private:
             _clusters.push_back(new Cluster<T>(c));
         }
 
-        //cout << "\nAfter seeding there are " << _clusters.size() << " clusters.";
-
         // First iteration
         vectorsToNearestCentroid(data);
         if (_maxIters == 0) {
@@ -187,28 +136,11 @@ private:
         while (!_converged) {
             vectorsToNearestCentroid(data);
             recalculateCentroids(data);
-
-			cout << endl << getRMSE(data);
-
             _iterCount++;
             if (_maxIters != -1 && _iterCount >= _maxIters) {
                 break;
             }
         }
-    }
-
-    size_t nearestObj(T *obj, vector<T*> &others) {
-        size_t nearest = 0;
-        float dist = 0;
-        float nearestDistance = _distF(obj, others[0]);
-        for (size_t i = 1; i < others.size(); ++i) {
-            dist = _distF(obj, others[i]);
-            if (dist < nearestDistance) {
-                nearestDistance = dist;
-                nearest = i;
-            }
-        }
-        return nearest;
     }
 
     /**
@@ -231,7 +163,8 @@ private:
         tbb::parallel_for(tbb::blocked_range<size_t>(0, data.size(), 1000),
                 [&](const tbb::blocked_range<size_t>& r) {
                     for (size_t i = r.begin(); i != r.end(); ++i) {
-                        size_t nearest = nearestObj(data[i], _centroids);
+                        //size_t nearest = nearestObj(data[i], _centroids);
+                        size_t nearest = _optimizer.nearestIndex(data[i], _centroids);
                         if (nearest != _nearestCentroid[i]) {
                             _converged = false;
                         }
@@ -272,6 +205,44 @@ private:
         );
         tbb::atomic_fence(); // make sure all writes are visible on all CPUs
     }
+
+    // Seeder
+    SEEDER *_seeder;
+
+    OPTIMIZER _optimizer;
+    PROTOTYPE _protoF;
+    
+    // enforce the number of clusters required
+    // if less than k clusters are produced, shuffle vectors randomly and split into k cluster
+    bool _enforceNumClusters = false;
+
+    // present number of iterations
+    int _iterCount = 0;
+
+    // maximum number of iterations
+    // -1 - run until complete convergence
+    // 0 - only assign nearest neighbors after seeding
+    // >= 1 - perform this many iterations
+    int _maxIters = 100;
+
+    // How many clusters should be found? i.e. k
+    int _numClusters = 0;
+
+    vector<T*> _centroids;
+    vector<Cluster<T>*> _clusters;
+    vector<Cluster<T>*> _finalClusters;
+
+    // The centroid index for each vector. Aligned with vectors member variable.
+    vector<size_t> _nearestCentroid;
+
+    // Weights for prototype function (we don't have to use these)
+    vector<int> _weights;
+
+    // Residual for convergence
+    float _eps = 0.00001f;
+    
+    // has the clustering converged
+    atomic<bool> _converged;    
 };
 
 

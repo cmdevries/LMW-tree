@@ -2,13 +2,7 @@
 #define	JOURNALPAPEREXPERIMENTS_H
 
 #include "StdIncludes.h"
-
-typedef SVector<bool> vecType;
-typedef hammingDistance distanceType;
-typedef meanBitPrototype2 protoType;
-typedef Node<vecType> nodeType;
-typedef RandomSeeder<vecType> seederType;
-typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
+#include "ExperimentTypedefs.h"
 
 void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
     if (!vectors.empty()) {
@@ -105,7 +99,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 vector<double> seconds;
                 for (int maxiters = 0; maxiters <= iterRange; ++maxiters) {
                     boost::timer::auto_cpu_timer all;
-                    TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
+                    TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiters);
                     tsvq.cluster(vectors);
                     all.stop();
                     cout << "." << flush;
@@ -142,10 +136,10 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                     if (maxiters == 0) {
                         // no iterations so dont update means
                         bool updateMeans = false;
-                        emt.seedSingleThreaded(vectors, splits, updateMeans);
+                        emt.seed(vectors, splits, updateMeans);
                     } else {
                         // seeding does first iteration
-                        emt.seedSingleThreaded(vectors, splits);
+                        emt.seed(vectors, splits);
                     }
                     for (int i = 1; i < maxiters; ++i) {
                         emt.EMStep();
@@ -185,7 +179,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 vector<double> seconds;
                 for (int m : orders) {
                     boost::timer::auto_cpu_timer all;
-                    TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
+                    TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiters);
                     tsvq.cluster(vectors);
                     all.stop();
                     cout << "." << flush;
@@ -222,7 +216,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                     boost::timer::auto_cpu_timer all;
                     EMTree<vecType, clustererType, distanceType, protoType> emt(m);
                     // seeding does first iteration
-                    emt.seedSingleThreaded(vectors, splits);
+                    emt.seed(vectors, splits);
                     for (int i = 1; i < maxiters; ++i) {
                         emt.EMStep();
                     }
@@ -264,7 +258,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
             vector<double> seconds;
             for (int m : orders) {
                 boost::timer::auto_cpu_timer all;
-                TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiters);
+                TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiters);
                 tsvq.cluster(vectors);
                 all.stop();
                 cout << "." << flush;
@@ -307,7 +301,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 boost::timer::auto_cpu_timer all;
                 EMTree<vecType, clustererType, distanceType, protoType> emt(m);
                 // seeding does first iteration
-                emt.seedSingleThreaded(vectors, splits);
+                emt.seed(vectors, splits);
                 for (int i = 1; i < maxiters; ++i) {
                     emt.EMStep();
                 }
@@ -343,14 +337,13 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
             vector<int> targetClusters = {1300, 1800, 2900, 4000};
             for (int k : targetClusters) {
                 boost::timer::auto_cpu_timer all;
-                clustererType kmeans;
-                kmeans.setNumClusters(k);
+                clustererType kmeans(k);
                 kmeans.setMaxIters(maxiters);
                 int finalClusters = kmeans.cluster(vectors).size();
                 all.stop();
                 cout << "." << flush;
                 clusters.push_back(finalClusters);
-                rmse.push_back(kmeans.getRMSE(vectors));
+                rmse.push_back(kmeans.getRMSE());
                 seconds.push_back(all.elapsed().wall / 1e9);
                 cout << all.elapsed().wall / 1e9 << flush;
             }
@@ -519,7 +512,7 @@ void clueweb() {
             {
                 boost::timer::auto_cpu_timer seeding("seeding %w seconds\n");
                 const bool updateMeans = false;
-                emt.seedSingleThreaded(vectors, splits, updateMeans);
+                emt.seed(vectors, splits, updateMeans);
             }
             {
                 boost::timer::auto_cpu_timer seeding("printing statistics %w seconds\n");            
@@ -568,7 +561,7 @@ void clueweb() {
         int depth = 3;
         int tsvqMaxiters = 5;        
         boost::timer::auto_cpu_timer tsvqTimer;
-        TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, tsvqMaxiters);
+        TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, tsvqMaxiters);
         tsvq.cluster(sample);
         tsvqTimer.stop();
         tsvq.printStats();
