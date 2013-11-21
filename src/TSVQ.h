@@ -7,7 +7,7 @@
 
 #include "tbb/task.h"
 
-using namespace tbb;
+using tbb::task;
 
 template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
 class TSVQTask : public task {
