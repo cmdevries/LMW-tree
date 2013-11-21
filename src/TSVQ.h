@@ -7,20 +7,18 @@
 
 #include "tbb/task.h"
 
-template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
+template <typename T, typename CLUSTERER, typename DISTANCE>
 class TSVQ {
 public:
 
     TSVQ(int order, int depth, int maxiters) : _m(order), _depth(depth),
     _root(new Node<T>()), _maxIters(maxiters) {
-        _clusterer.setNumClusters(_m);
-        _clusterer.setMaxIters(_maxIters);
     }
-    
+
     ~TSVQ() {
         delete _root;
     }
-    
+
     Node<T>* getMWayTree() {
         return _root;
     }
@@ -81,8 +79,7 @@ private:
 
         void cluster() {
             // split using clustering algorithm
-            ClustererType* clusterer = new ClustererType();
-            clusterer->setNumClusters(_m);
+            CLUSTERER* clusterer = new CLUSTERER(_m);
             clusterer->setMaxIters(_maxIters);
             vector<Cluster<T>*> clusters = clusterer->cluster(_current->getKeys());            
             
@@ -142,9 +139,6 @@ private:
 
         // The root of the tree.
         Node<T> *_current;
-
-        DistanceType _distF;
-        ProtoType _protoF;
     };
 
     double RMSE() {
@@ -163,7 +157,7 @@ private:
         if (child->isLeaf()) {
             vector<T*> &keys = child->getKeys();
             for (T* key : keys) {
-                dis = _distF(key, parentKey);
+                dis = _distance(key, parentKey);
                 distance += dis * dis;
             }
         } else {
@@ -255,18 +249,16 @@ private:
     // The order of this tree
     int _m;
 
-    // The order of this tree
+    // How many levels the tree has
     int _depth;
 
     // The root of the tree.
     Node<T> *_root;
 
-	// The maximum number of iterations
-	int _maxIters;
-
-    ClustererType _clusterer;
-    DistanceType _distF;
-    ProtoType _protoF;
+    // The maximum number of iterations
+    int _maxIters;
+    
+    DISTANCE _distance;
 };
 
 #endif	/* TSVQ_H */

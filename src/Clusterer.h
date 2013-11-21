@@ -16,20 +16,16 @@
 
 template <typename T>
 class Clusterer {
-	
 public:
-		
-	virtual int numClusters() = 0;
+
+    virtual ~Clusterer<T>() {
+    }
+
+    virtual int numClusters() = 0;
+
     virtual vector<Cluster<T>*>& cluster(vector<T*> &data) = 0;
 
-	virtual vector<size_t>& getNearestCentroids() = 0;
-
-	virtual void setNumClusters(size_t n) = 0;
-
-    //virtual vector<VecFloat32*>& getClusters() = 0;
-
-	virtual ~Clusterer<T>() {  }
-	 
+    virtual void setNumClusters(size_t n) = 0;
 };
 
 #endif	/* CLUSTERER_H */

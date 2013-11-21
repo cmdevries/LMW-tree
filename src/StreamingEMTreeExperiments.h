@@ -5,19 +5,6 @@
 #include "StdIncludes.h"
 #include "tbb/task_scheduler_init.h"
 
-#include <sstream>
-
-using namespace std;
-
-typedef SVector<bool> vecType;
-typedef hammingDistance distanceType;
-typedef meanBitPrototype2 protoType;
-typedef Node<vecType> nodeType;
-typedef RandomSeeder<vecType> seederType;
-typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
-typedef SVector<uint32_t> ACCUMULATOR;
-
-typedef StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> StreamingEMTree_t;
 
 StreamingEMTree_t* streamingEMTreeInit() {
     // load data
@@ -39,7 +26,7 @@ StreamingEMTree_t* streamingEMTreeInit() {
     const int m = 30;
     const int depth = 3;
     const int maxiter = 0;
-    TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, maxiter);
+    TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiter);
 
     {
         boost::timer::auto_cpu_timer load("cluster subset using TSVQ: %w seconds\n");

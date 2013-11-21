@@ -15,6 +15,9 @@
 #include <stdexcept>
 #include <atomic>
 #include <functional>
+#include <tuple>
+#include <set>
+#include <sstream>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -35,6 +38,8 @@ using std::flush;
 using std::shared_ptr;
 using std::max;
 using std::atomic;
+using std::tuple;
+using std::set;
 
 using boost::dynamic_bitset;
 

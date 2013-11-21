@@ -60,10 +60,9 @@ private:
     int _updateDelay;
 
 public:
-    KTree(int order, int clustererMaxiters) {
+    KTree(int order, int clustererMaxiters) : _clusterer(2) {
         _m = order;
         _root = new Node<T>(); // initial root is a leaf
-        _clusterer.setNumClusters(2);
         _clusterer.setMaxIters(clustererMaxiters);
         _clusterer.setEnforceNumClusters(true);
         _added = 0;
@@ -465,13 +464,12 @@ private:
         //std::cout << "clusters found = " << clusters.size() << std::flush;
 
         // Get nearest centroids after clustering
-        tempNearCentroids = _clusterer.getNearestCentroids();
-
-
-        for (int i = 0; i < tempNearCentroids.size(); i++) {
-            if (tempNearCentroids[i] == 0) parent->add(tempKeys[i], tempChildren[i]);
-            else node2->add(tempKeys[i], tempChildren[i]);
+        for (auto key : clusters[0]->getNearestList()) {
+            parent->add(key);
         }
+        for (auto key : clusters[1]->getNearestList()) {
+            node2->add(key);
+        }        
 
         // Now make our split result
         result.isSplit = true;
@@ -512,11 +510,11 @@ private:
         //std::cout << "clusters found = " << clusters.size() << std::flush;
 
         // Get nearest centroids after clustering
-        tempNearCentroids = _clusterer.getNearestCentroids();
-
-        for (int i = 0; i < tempNearCentroids.size(); i++) {
-            if (tempNearCentroids[i] == 0) child->add(tempKeys[i]);
-            else node2->add(tempKeys[i]);
+        for (auto key : clusters[0]->getNearestList()) {
+            child->add(key);
+        }
+        for (auto key : clusters[1]->getNearestList()) {
+            node2->add(key);
         }
 
         // Now make our split result

@@ -14,25 +14,17 @@
 #include "BitMapList8.h"
 #include "StdIncludes.h"
 #include "SVectorStream.h"
+#include "Optimizer.h"
 
 #include "EMTree.h"
 #include "StreamingEMTree.h"
 #include "KTree.h"
 #include "TSVQ.h"
 
+#include "ExperimentTypedefs.h"
 #include "CreateSignatures.h"
 #include "StreamingEMTreeExperiments.h"
 #include "JournalPaperExperiments.h"
-
-#include <set>
-using std::set;
-
-typedef SVector<bool> vecType;
-typedef hammingDistance distanceType;
-typedef meanBitPrototype2 protoType;
-typedef Node<vecType> nodeType;
-typedef RandomSeeder<vecType> seederType;
-typedef KMeans<vecType, seederType, distanceType, protoType> clustererType;
 
 void sigKmeansCluster(vector<SVector<bool>*> &vectors, const string& clusterFile) {
     // Define the types we want to use
@@ -47,7 +39,7 @@ void sigKmeansCluster(vector<SVector<bool>*> &vectors, const string& clusterFile
                 << std::endl;
         vector<Cluster<vecType>*>& clusters = clusterer.cluster(vectors);
         cout << "cluster count = " << clusters.size() << std::endl;
-        cout << "RMSE = " << clusterer.getRMSE(vectors) << std::endl;
+        cout << "RMSE = " << clusterer.getRMSE() << std::endl;
         cout << "writing clustering results to " << clusterFile << endl;
         std::ofstream ofs(clusterFile);
         for (size_t i = 0; i < clusters.size(); ++i) {
@@ -65,7 +57,7 @@ void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
     vector<int> nodeSizes = {10};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
-        TSVQ<vecType, clustererType, distanceType, protoType> tsvq(m, depth, iters);
+        TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, iters);
         boost::timer::auto_cpu_timer all;
         tsvq.cluster(vectors);
         tsvq.printStats();
@@ -91,7 +83,7 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
         {
             boost::timer::auto_cpu_timer seed("\nseeding tree: %w seconds\n");
             bool updateMeans = false;
-            emt.seedSingleThreaded(vectors, splits, updateMeans);
+            emt.seed(vectors, splits, updateMeans);
             emt.printStats();
         }
         for (int i = 0; i < iters; ++i) {
@@ -268,10 +260,8 @@ void testHistogram(vector<SVector<bool>*>& vectors) {
 
 int main(int argc, char** argv) {
     std::srand(std::time(0));
-
-
     
-    if (true) {
+    if (false) {
         streamingEMTree();
     } else if (false) {
         clueweb();
