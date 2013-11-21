@@ -9,7 +9,7 @@ typedef RandomSeeder<vecType> seederType;
 typedef Optimizer<vecType, distanceType, Minimize, protoType> OPTIMIZER;
 typedef KMeans<vecType, seederType, OPTIMIZER> clustererType;
 typedef SVector<uint32_t> ACCUMULATOR;
-typedef StreamingEMTree<vecType, distanceType, protoType, ACCUMULATOR> StreamingEMTree_t;
+typedef StreamingEMTree<vecType, ACCUMULATOR, OPTIMIZER> StreamingEMTree_t;
 
 #endif	/* EXPERIMENTTYPEDEFS_H */
 

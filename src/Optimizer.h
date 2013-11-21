@@ -38,21 +38,33 @@ public:
     }
     
     T* nearest(T* object, vector<T*>& others) {
-        double nearestDistance = 0;
         size_t nearestIndex = 0;
-        return nearest(object, others, &nearestDistance, &nearestIndex);
-    }
-    
-    T* nearest(T* object, vector<T*>& others, double* nearestDistance) {
-        size_t nearestIndex;
-        return nearest(object, others, nearestDistance, &nearestIndex);
-    }    
+        return nearest(object, others, &nearestIndex);
+    } 
 
     size_t nearestIndex(T* object, vector<T*>& others) {
-        double nearestDistance = 0;
         size_t nearestIndex = 0;
-        nearest(object, others, &nearestDistance, &nearestIndex);
+        nearest(object, others, &nearestIndex);
         return nearestIndex;
+    }
+
+    /**
+     * This function provides access to a more complex KEY via used of an
+     * ACCESSOR functor that implements T* operator()(KEY* key).
+     * 
+     * For example, this is used in StreamingEMTree where ACCUMULATORs are also
+     * stored in the key. It avoids having to unpack all they T* from the 
+     * more complex key type.
+     */
+    template <typename KEY, typename ACCESSOR>
+    size_t nearestIndex(T* object, vector<KEY*>& others, ACCESSOR& accessor) {
+        size_t nearestIndex = 0;
+        nearest(object, others, &nearestIndex, accessor);
+        return nearestIndex;
+    }
+
+    double squaredDistance(T* object1, T* object2) {
+        return _distance.squared(object1, object2);
     }
     
     double sumSquaredError(T* object, vector<T*>& others) {
@@ -61,16 +73,31 @@ public:
             SSE += _distance.squared(object, otherObject);
         }
         return SSE;
-    }    
+    }
 
 private:
-    T* nearest(T* object, vector<T*>& others, double* nearestDistance, size_t* nearestIndex) {
+    /**
+     * The default accessor is used for simple key types where the vector of
+     * other keys match the object.
+     */
+    struct DefaultAccessor {
+        T* operator()(T* key) {
+            return key;
+        }
+    };
+    
+    T* nearest(T* object, vector<T*>& others, size_t* nearestIndex) {
+        return nearest(object, others, nearestIndex, _defaultAccessor);
+    }
+    
+    template <typename KEY, typename ACCESSOR>
+    KEY* nearest(T* object, vector<KEY*>& others, size_t* nearestIndex, ACCESSOR& accessor) {
         *nearestIndex = 0;
-        *nearestDistance = _distance(object, others[0]);
+        double nearestDistance = _distance(object, accessor(others[0]));
         for (size_t i = 1; i < others.size(); ++i) {
-            double currentDistance = _distance(object, others[i]);
-            if (_comp(currentDistance, *nearestDistance)) {
-                *nearestDistance = currentDistance;
+            double currentDistance = _distance(object, accessor(others[i]));
+            if (_comp(currentDistance, nearestDistance)) {
+                nearestDistance = currentDistance;
                 *nearestIndex = i;
             }
         }
@@ -80,6 +107,7 @@ private:
     COMPARATOR _comp;
     DISTANCE _distance;
     PROTOTYPE _prototype;
+    DefaultAccessor _defaultAccessor;
 };
 
 #endif	/* OPTIMIZER_H */
