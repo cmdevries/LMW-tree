@@ -6,7 +6,7 @@ namespace lmw {
 class BitMapList16 {
 public:
 
-    BitMapList16() {
+    BitMapList16() : entries(new BitMapList16Entry[65536]) {
         //std::cout << "\nInitialising ...";
         for (int i = 0; i < 65536; i++) {
             //std::cout << "\n\n-- " << i << "\n";
@@ -52,7 +52,7 @@ private:
         char posns[16];
     };
 
-    BitMapList16Entry entries[65536];
+    BitMapList16Entry *entries;
 };
 
 } // namespace lmw

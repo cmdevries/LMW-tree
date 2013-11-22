@@ -6,7 +6,7 @@ namespace lmw {
 class BitMapList8 {
 public:
 
-    BitMapList8() {
+    BitMapList8() : entries(new BitMapList8Entry[256]) {
         //std::cout << "\nInitialising ...";
         for (int i = 0; i < 256; i++) {
             //std::cout << "\n\n-- " << i << "\n";
@@ -49,7 +49,7 @@ private:
         char posns[8];
     };
 
-    BitMapList8Entry entries[256];
+    BitMapList8Entry *entries;
 };
 
 } // namespace lmw
