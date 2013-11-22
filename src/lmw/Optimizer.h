@@ -17,6 +17,8 @@
 
 #include "StdIncludes.h"
 
+namespace lmw {
+
 struct Minimize {
     bool operator()(double currentDistance, double nearestDistance) {
         return currentDistance < nearestDistance;
@@ -110,5 +112,6 @@ private:
     DefaultAccessor _defaultAccessor;
 };
 
-#endif	/* OPTIMIZER_H */
+} // namespace lmw
 
+#endif	/* OPTIMIZER_H */

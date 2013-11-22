@@ -24,13 +24,12 @@
 #ifndef PROTOTYPE_H
 #define	PROTOTYPE_H
 
-#include <vector>
-
+#include "StdIncludes.h"
 #include "BitMapList8.h"
 #include "BitMapList16.h"
 #include "SVector.h"
 
-using namespace std;
+namespace lmw {
 
 template <typename T>
 struct meanPrototype {
@@ -313,5 +312,7 @@ struct meanBitPrototype8 {
     }
 
 };
+
+} // namespace lmw
 
 #endif	/* PROTOTYPE_H */

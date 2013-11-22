@@ -6,6 +6,8 @@
 #include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
+namespace lmw {
+
 /**
  * Visits all the clusters in a Streaming EM-tree along the insertion path.
  */
@@ -414,5 +416,6 @@ private:
     int _maxtokens = 1024;
 };
  
-#endif	/* STREAMINGEMTREE_H */
+} // namespace lmw
 
+#endif	/* STREAMINGEMTREE_H */

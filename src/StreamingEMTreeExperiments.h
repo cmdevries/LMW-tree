@@ -2,7 +2,7 @@
 #define	STREAMINGEMTREEEXPERIMENTS_H
 
 #include "CreateSignatures.h"
-#include "StdIncludes.h"
+#include "lmw/StdIncludes.h"
 #include "tbb/task_scheduler_init.h"
 
 

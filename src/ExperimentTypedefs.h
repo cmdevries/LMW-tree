@@ -1,6 +1,27 @@
 #ifndef EXPERIMENTTYPEDEFS_H
 #define	EXPERIMENTTYPEDEFS_H
 
+#include "lmw/Distance.h"
+#include "lmw/Prototype.h"
+#include "lmw/SVector.h"
+#include "lmw/Cluster.h"
+#include "lmw/Clusterer.h"
+#include "lmw/Seeder.h"
+#include "lmw/DSquaredSeeder.h"
+#include "lmw/RandomSeeder.h"
+#include "lmw/VectorGenerator.h"
+#include "lmw/StdIncludes.h"
+#include "lmw/SVectorStream.h"
+#include "lmw/Optimizer.h"
+
+#include "lmw/KMeans.h"
+#include "lmw/TSVQ.h"
+#include "lmw/KTree.h"
+#include "lmw/EMTree.h"
+#include "lmw/StreamingEMTree.h"
+
+using namespace lmw;
+
 typedef SVector<bool> vecType;
 typedef RandomSeeder<vecType> RandomSeeder_t;
 typedef Optimizer<vecType, hammingDistance, Minimize, meanBitPrototype2> OPTIMIZER;

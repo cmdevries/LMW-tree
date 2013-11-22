@@ -7,6 +7,8 @@
 
 #include "tbb/task.h"
 
+namespace lmw {
+
 template <typename T, typename CLUSTERER, typename DISTANCE>
 class TSVQ {
 public:
@@ -258,5 +260,7 @@ private:
     
     DISTANCE _distance;
 };
+
+} // namespace lmw
 
 #endif	/* TSVQ_H */

@@ -1,7 +1,6 @@
 #ifndef STD_INCLUDES_H
 #define STD_INCLUDES_H
 
-
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -27,6 +26,8 @@
 
 #include "Utils.h"
 
+namespace lmw {
+
 using std::deque;
 using std::vector;
 using std::list;
@@ -34,13 +35,14 @@ using std::string;
 using std::cout;
 using std::endl;
 using std::flush;
-using std::shared_ptr;
 using std::max;
 using std::atomic;
 using std::set;
-
-using boost::dynamic_bitset;
-
+using std::ifstream;
+using std::ofstream;
+using std::stringstream;
+using std::ios;
+using std::runtime_error;
 
 typedef boost::mt19937 RND_ENG;
 
@@ -51,6 +53,8 @@ typedef boost::bernoulli_distribution<> RND_BERN;
 typedef boost::variate_generator<RND_ENG,RND_UNIFORM01> RND_UNI_GEN_01;
 typedef boost::variate_generator<RND_ENG,RND_NORMAL> RND_NORM_GEN_01;
 typedef boost::variate_generator<RND_ENG,RND_BERN> RND_BERN_GEN_01;
+
+} // namespace lmw
 
 #endif	
 

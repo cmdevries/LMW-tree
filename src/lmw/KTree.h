@@ -7,6 +7,8 @@
 #include "KMeans.h"
 #include "NodeVisitor.h"
 
+namespace lmw {
+
 template <typename T>
 struct SplitResult {
     bool isSplit;
@@ -510,6 +512,7 @@ private:
     int _updateDelay;
 };
 
+} // namespace lmw
 
 #endif
 

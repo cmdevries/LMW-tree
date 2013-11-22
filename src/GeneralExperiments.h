@@ -1,7 +1,7 @@
 #ifndef GENERALEXPERIMENTS_H
 #define	GENERALEXPERIMENTS_H
 
-#include "StdIncludes.h"
+#include "lmw/StdIncludes.h"
 #include "ExperimentTypedefs.h"
 
 void sigKmeansCluster(vector<SVector<bool>*> &vectors, const string& clusterFile) {

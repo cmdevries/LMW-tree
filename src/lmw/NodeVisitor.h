@@ -3,6 +3,8 @@
 
 #include "Node.h"
 
+namespace lmw {
+
 template <typename T>
 class NodeVisitor {
 public:
@@ -69,11 +71,6 @@ public:
     }
 };
 
-
-
-
-
+} // namespace lmw
 
 #endif	/* NODE_VISITOR_H */
-
-

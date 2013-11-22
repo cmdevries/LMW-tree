@@ -1,17 +1,19 @@
-#ifndef BIT_MAP_LIST_8_H
-#define BIT_MAP_LIST_8_H
+#ifndef BIT_MAP_LIST_16_H
+#define BIT_MAP_LIST_16_H
 
-class BitMapList8 {
+namespace lmw {
+
+class BitMapList16 {
 public:
 
-    BitMapList8() {
+    BitMapList16() {
         //std::cout << "\nInitialising ...";
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < 65536; i++) {
             //std::cout << "\n\n-- " << i << "\n";
             int numBits = 0;
             entries[i].numBits = 0;
 
-            for (size_t b = 0; b < 8; b++) {
+            for (size_t b = 0; b < 16; b++) {
                 if (i & (1 << b)) {
                     entries[i].posns[numBits] = b;
                     numBits++;
@@ -21,10 +23,12 @@ public:
 
             entries[i].numBits = numBits;
         }
+
     }
 
     void add(unsigned short idx, int* counts, int weight) const {
         //std::cout << "\n--  " << idx << " ... " << entries[idx].numBits;
+
         for (int i = 0; i < entries[idx].numBits; i++) {
             counts[entries[idx].posns[i]] += weight;
         }
@@ -32,6 +36,7 @@ public:
 
     inline void add1(unsigned short idx, int* counts) const {
         //std::cout << "\n--  " << idx << " ... " << entries[idx].numBits;
+
         int num = entries[idx].numBits;
         int posn;
         for (int i = 0; i < num; i++) {
@@ -42,12 +47,14 @@ public:
 
 private:
 
-    struct BitMapList8Entry {
+    struct BitMapList16Entry {
         char numBits;
-        char posns[8];
+        char posns[16];
     };
 
-    BitMapList8Entry entries[256];
+    BitMapList16Entry entries[65536];
 };
 
-#endif	/* BIT_MAP_LIST_8_H */
+} // namespace lmw
+
+#endif	/* BIT_MAP_LIST_16_H */

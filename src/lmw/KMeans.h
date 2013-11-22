@@ -9,6 +9,8 @@
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_for.h"
 
+namespace lmw {
+
 template <typename T, typename SEEDER, typename OPTIMIZER>
 class KMeans : public Clusterer<T> {
 public:
@@ -242,7 +244,7 @@ private:
     atomic<bool> _converged;    
 };
 
-
+} // namespace lmw
 
 #endif	/* KMEANS_H */
 

@@ -5,6 +5,7 @@
 
 #include "Node.h"
 
+namespace lmw {
 
 template <typename T, typename CLUSTERER, typename OPTIMIZER>
 class EMTree {
@@ -381,6 +382,7 @@ private:
     vector<int> weights;    
 };
 
+} // namespace lmw
 
 #endif
 

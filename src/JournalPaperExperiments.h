@@ -1,7 +1,7 @@
 #ifndef JOURNALPAPEREXPERIMENTS_H
 #define	JOURNALPAPEREXPERIMENTS_H
 
-#include "StdIncludes.h"
+#include "lmw/StdIncludes.h"
 #include "ExperimentTypedefs.h"
 
 void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
