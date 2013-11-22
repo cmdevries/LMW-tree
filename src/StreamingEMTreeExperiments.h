@@ -3,8 +3,11 @@
 
 #include "CreateSignatures.h"
 #include "lmw/StdIncludes.h"
+#include "lmw/ClusterVisitor.h"
+#include "lmw/InsertVisitor.h"
+#include "tbb/mutex.h"
 #include "tbb/task_scheduler_init.h"
-
+#include "lmw/StreamingEMTree.h"
 
 StreamingEMTree_t* streamingEMTreeInit() {
     // load data
@@ -48,23 +51,22 @@ const char wikiDocidFile[] = "data/wiki.4096.docids";
 const char wikiSignatureFile[] = "data/wiki.4096.sig";
 const size_t wikiSignatureLength = 4096;
     
-void writeClusters(const string& filenamePrefix, StreamingEMTree_t* emtree) {
+void writeClusters(StreamingEMTree_t* emtree) {
     // open files
     SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
 
     // setup output streams for all levels in the tree
-    struct ClusterStreams {
-        ofstream* stats;
-        ofstream* clusters;
-    };
-    vector<ClusterStreams> outputStreams;
-    for (int level = 1; level <= emtree->getMaxLevelCount(); level++) {
-        stringstream ss;
-        ss << filenamePrefix << "_level" << level;
-        ClusterStreams streams;
-        streams.stats = new ofstream(ss.str() + "_cluster_stats.txt");
-        streams.clusters = new ofstream(ss.str() + "_clusters.txt");
-        outputStreams.push_back(streams);
+    const string prefix = "wikipedia_clusters";
+    
+    {
+        boost::timer::auto_cpu_timer update("writing cluster stats: %w seconds\n");    
+        ClusterStats cs(emtree->getMaxLevelCount(), prefix);
+        emtree->visit(cs);
+    }
+    {
+        boost::timer::auto_cpu_timer update("writing clusters: %w seconds\n");   
+        ClusterWriter cw(emtree->getMaxLevelCount(), prefix);
+        emtree->visit(vs, cw);
     }
 }
 
@@ -108,18 +110,17 @@ void streamingEMTree() {
     const int maxIters = 2;
     StreamingEMTree_t* emtree = streamingEMTreeInit();
     cout << endl << "Streaming EM-tree:" << endl;
-    for (int i = 0; i < maxIters - 1; i++) {
+    for (int i = 0; i < maxIters; i++) {
         cout << "ITERATION " << i << endl;
         streamingEMTreeInsertPruneReport(emtree);
-        {
+        if (i != maxIters - 1) {
             boost::timer::auto_cpu_timer update("update streaming EM-tree: %w seconds\n");
             emtree->update();
         }
         cout << "-----" << endl << endl;
     }
-    
-    // last iteration requires no update
-    streamingEMTreeInsertPruneReport(emtree);
+        
+    writeClusters(emtree);
 }
 
 #endif	/* STREAMINGEMTREEEXPERIMENTS_H */

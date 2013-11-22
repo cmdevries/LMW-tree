@@ -3,26 +3,12 @@
 
 #include "StdIncludes.h"
 #include "SVectorStream.h"
+#include "ClusterVisitor.h"
+#include "InsertVisitor.h"
 #include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
 namespace lmw {
-
-/**
- * Visits all the clusters in a Streaming EM-tree along the insertion path.
- */
-template <typename T>
-class InsertVisitor {
-public:
-    InsertVisitor() { }
-    virtual ~InsertVisitor() { }
-    
-    /**
-     * Must be thread safe. It can be called from multiple threads.
-     */
-    virtual void accept(T* clusterCenter, int level, double RMSE,
-            uint64_t objectCount) = 0;
-};
 
 /**
  * The streaming version of the EM-tree algorithm does not store the
@@ -82,13 +68,17 @@ public:
 
         return totalRead;
     }
+
+    void visit(ClusterVisitor<T>& visitor) {
+        visit(_root, visitor);
+    }    
     
     void visit(vector<T*>& data, InsertVisitor<T>& visitor) {
         for (T* object : data) {
             visit(_root, object, visitor);
         }
     }
-
+    
     size_t insert(SVectorStream<T>& vs) {
         size_t totalRead = 0;
 
@@ -186,21 +176,31 @@ private:
     size_t nearest(T* object, vector<AccumulatorKey*>& keys) {
         return _optimizer.nearestIndex(object, keys, _accessor);
     }
+
+    void visit(Node<AccumulatorKey>* node, ClusterVisitor<T>& visitor, int level = 1) {
+        for (size_t i = 0; i < node->size(); i++) {
+            auto accumulatorKey = node->getKey(i);
+            uint64_t count = accumulatorKey->count;
+            double SSE = accumulatorKey->sumSquaredError;
+            if (!node->isLeaf()) {
+                auto child = node->getChild(i);
+                count = objCount(child);
+                SSE = sumSquaredError(child);
+            }
+            double RMSE = sqrt(SSE / count);
+            visitor.accept(level, accumulatorKey->key, RMSE, count);
+            for (auto child : node->getChildren()) {
+                visit(child, visitor, level + 1);
+            }
+        }
+    }
     
     void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
         size_t nearestIndex = nearest(object, node->getKeys());
         auto accumulatorKey = node->getKey(nearestIndex);
-        uint64_t count = accumulatorKey->count;
-        double sumSquaredError = accumulatorKey->sumSquaredError;
+        visitor.accept(level, object, accumulatorKey->key);
         if (!node->isLeaf()) {
-            auto child = node->getChild(nearestIndex);
-            count = objCount(child);
-            sumSquaredError = sumSquaredError(child);
-        }
-        double RMSE = sqrt(sumSquaredError / count);
-        visitor.accept(accumulatorKey->key, level, RMSE, count);
-        if (!node->isLeaf()) {
-            visit(node->getChild(nearestIndex), object, level + 1);
+            visit(node->getChild(nearestIndex), object, visitor, level + 1);
         }
     }    
     
