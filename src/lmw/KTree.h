@@ -7,6 +7,8 @@
 #include "KMeans.h"
 #include "NodeVisitor.h"
 
+namespace lmw {
+
 template <typename T>
 struct SplitResult {
     bool isSplit;
@@ -24,41 +26,8 @@ struct SplitResult {
 };
 
 // KTree class
-template <typename T, typename ClustererType, typename DistanceType, typename ProtoType>
+template <typename T, typename CLUSTERER, typename OPTIMIZER>
 class KTree {
-private:
-
-    // The order of this tree
-    int _m;
-
-    // The root of the tree.
-    Node<T> *_root;
-
-    ClustererType _clusterer;
-
-    DistanceType _distF;
-    ProtoType _protoF;
-
-    // Use these containers so as not to create new ones
-    // every time we split
-    vector<T*> tempKeys;
-    vector<Node<T>*> tempChildren;
-    vector<size_t> tempNearCentroids;
-
-    vector<T*> removed;
-
-    // Weights for prototype function (we don't have to use these)
-    vector<int> weights;
-
-    // How many vectors have been inserted into the tree.
-    size_t _added;
-
-    // Use delayed updates?
-    bool _delayedUpdates;
-
-    // Update along insertion path every _updateDelay insertions.
-    int _updateDelay;
-
 public:
     KTree(int order, int clustererMaxiters) : _clusterer(2) {
         _m = order;
@@ -209,27 +178,16 @@ private:
     }
 
     double sumSquaredError(T* parentKey, Node<T> *child) {
-
         double distance = 0.0;
-        double dis;
-
         if (child->isLeaf()) {
-            vector<T*> &keys = child->getKeys();
-            for (T* key : keys) {
-                dis = _distF(key, parentKey);
-                distance += dis * dis;
-            }
+            distance += _optimizer.sumSquaredError(parentKey, child->getKeys());
         } else {
-            int numEntries = child->size();
-
             vector<T*> &keys = child->getKeys();
             vector<Node<T>*> &children = child->getChildren();
-
-            for (int i = 0; i < numEntries; i++) {
+            for (int i = 0; i < child->size(); i++) {
                 distance += sumSquaredError(keys[i], children[i]);
             }
         }
-
         return distance;
     }
 
@@ -306,23 +264,6 @@ private:
         }
     }
 
-    size_t nearestChild(T *obj, vector<T*> &others) {
-
-        size_t nearest = 0;
-        float dist;
-        float nearestDistance = _distF(obj, others[0]);
-
-        for (size_t i = 1; i < others.size(); ++i) {
-            dist = _distF(obj, others[i]);
-            if (dist < nearestDistance) {
-                nearestDistance = dist;
-                nearest = i;
-            }
-        }
-
-        return nearest;
-    }
-
     int prune(Node<T>* n) {
         if (n->isLeaf()) {
             return 0; // non-empty leaf node
@@ -363,30 +304,20 @@ private:
     }
 
     void pushDownNoUpdate(Node<T> *n, T *vec) {
-
         //std::cout << "\n\tPushing down (no update) ...";
-
         if (n->isLeaf()) {
             n->add(vec); // Finished
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
-
             vector<T*>& keys = n->getKeys();
-            vector<Node<T>*>& children = n->getChildren();
-
-            size_t nearest = nearestChild(vec, keys);
-            Node<T> *nearestChild = children[nearest];
-
-            pushDownNoUpdate(nearestChild, vec);
+            size_t nearest = _optimizer.nearestIndex(vec, keys);
+            pushDownNoUpdate(n->getChild(nearest), vec);
         }
     }
 
     SplitResult<T> pushDown(Node<T> *n, T *vec) {
-
         //std::cout << "\n\tPushing down ...";
-
         SplitResult<T> result;
-
         if (n->isLeaf()) {
             if (n->size() >= _m) {
                 // split this node and pass new node to parent to insert
@@ -396,19 +327,10 @@ private:
             }
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
-
             vector<T*>& keys = n->getKeys();
-            vector<Node<T>*>& children = n->getChildren();
-
-            size_t nearest = nearestChild(vec, keys);
-
-            T *nearestKey = keys[nearest];
-            Node<T> *nearestChild = children[nearest];
-
-            result = pushDown(nearestChild, vec);
-
-            if (result.isSplit) { // if there was a split
-
+            size_t nearest = _optimizer.nearestIndex(vec, keys);
+            result = pushDown(n->getChild(nearest), vec);
+            if (result.isSplit) {
                 updatePrototype(result._child1, result._key1);
                 updatePrototype(result._child2, result._key2);
 
@@ -423,11 +345,10 @@ private:
                 }
             } else {
                 if (!_delayedUpdates || (_delayedUpdates && _added % _updateDelay == 0)) {
-                    updatePrototype(nearestChild, nearestKey);
+                    updatePrototype(n->getChild(nearest), n->getKey(nearest));
                 }
             }
         }
-
         return result;
     }
 
@@ -544,7 +465,7 @@ private:
             }
         }
 
-        _protoF(parentKey, child->getKeys(), weights);
+        _optimizer.updatePrototype(parentKey, child->getKeys(), weights);
     }
 
     void removeData(Node<T> *n, vector<T*> &data) {
@@ -560,8 +481,38 @@ private:
         }
     }
 
+    // The order of this tree
+    int _m;
+
+    // The root of the tree.
+    Node<T> *_root;
+
+    CLUSTERER _clusterer;
+
+    OPTIMIZER _optimizer;
+
+    // Use these containers so as not to create new ones
+    // every time we split
+    vector<T*> tempKeys;
+    vector<Node<T>*> tempChildren;
+    vector<size_t> tempNearCentroids;
+
+    vector<T*> removed;
+
+    // Weights for prototype function (we don't have to use these)
+    vector<int> weights;
+
+    // How many vectors have been inserted into the tree.
+    size_t _added;
+
+    // Use delayed updates?
+    bool _delayedUpdates;
+
+    // Update along insertion path every _updateDelay insertions.
+    int _updateDelay;
 };
 
+} // namespace lmw
 
 #endif
 

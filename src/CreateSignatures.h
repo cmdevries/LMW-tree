@@ -4,7 +4,7 @@
 #ifndef LOADSIGNATURES_H
 #define	LOADSIGNATURES_H
 
-#include "StdIncludes.h"
+#include "lmw/StdIncludes.h"
 
 void genData(vector<SVector<bool>*> &vectors, size_t sigSize, size_t numVectors) {
 

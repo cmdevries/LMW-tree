@@ -1,7 +1,7 @@
 #ifndef CLUSTER_H
 #define CLUSTER_H
 
-
+namespace lmw {
 
 // Cluster is a container for the cluster centroid and
 // the nearest vectors of the centroid. It does not
@@ -43,6 +43,7 @@ public:
 
 };
 
+} // namespace lmw
 
 #endif	/* CLUSTER_H */
 

@@ -2,7 +2,7 @@
 #define	STREAMINGEMTREEEXPERIMENTS_H
 
 #include "CreateSignatures.h"
-#include "StdIncludes.h"
+#include "lmw/StdIncludes.h"
 #include "tbb/task_scheduler_init.h"
 
 
@@ -26,7 +26,7 @@ StreamingEMTree_t* streamingEMTreeInit() {
     const int m = 30;
     const int depth = 3;
     const int maxiter = 0;
-    TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiter);
+    TSVQ_t tsvq(m, depth, maxiter);
 
     {
         boost::timer::auto_cpu_timer load("cluster subset using TSVQ: %w seconds\n");

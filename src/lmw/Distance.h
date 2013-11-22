@@ -26,6 +26,8 @@
 
 #include "SVector.h"
 
+namespace lmw {
+
 struct hammingDistance {
     double operator()(SVector<bool> *v1, SVector<bool> *v2) const {
         return SVector<bool>::hammingDistance(*v1, *v2);
@@ -67,6 +69,8 @@ struct euclideanDistance {
         return squared(t1, t2);
     }    
 };
+
+} // namespace lmw
 
 #endif	/* DISTANCE_H */
 

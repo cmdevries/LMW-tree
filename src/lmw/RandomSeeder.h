@@ -5,6 +5,7 @@
 #include "Seeder.h"
 #include "StdIncludes.h"
 
+namespace lmw {
 
 template <typename T>
 class RandomSeeder : public Seeder<T> {
@@ -41,5 +42,6 @@ public:
 	
 };
 
+} // namespace lmw
 
 #endif

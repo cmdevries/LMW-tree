@@ -4,6 +4,8 @@
 #include "SVector.h"
 #include "Cluster.h"
 
+namespace lmw {
+
 // Implementations of this class will generate cluster
 // objects and will also create the centroids contained within
 // the cluster objects. The ownership of the cluster centroids
@@ -27,6 +29,8 @@ public:
 
     virtual void setNumClusters(size_t n) = 0;
 };
+
+} // namespace lmw
 
 #endif	/* CLUSTERER_H */
 

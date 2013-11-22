@@ -7,6 +7,8 @@
 
 #include "tbb/task.h"
 
+namespace lmw {
+
 template <typename T, typename CLUSTERER, typename DISTANCE>
 class TSVQ {
 public:
@@ -69,9 +71,8 @@ private:
     class TSVQTask : public tbb::task {
     public:
 
-        TSVQTask(Node<T>* current, int order, int depth, int maxiters) : _current(current), _m(order),
-        _treeDepth(depth),
-        _maxIters(maxiters) {
+        TSVQTask(Node<T>* current, int order, int depth, int maxiters) :
+            _current(current), _m(order), _treeDepth(depth), _maxIters(maxiters) {
         }
 
         ~TSVQTask() {
@@ -157,8 +158,7 @@ private:
         if (child->isLeaf()) {
             vector<T*> &keys = child->getKeys();
             for (T* key : keys) {
-                dis = _distance(key, parentKey);
-                distance += dis * dis;
+                distance += _distance.squared(key, parentKey);;
             }
         } else {
             int numEntries = child->size();
@@ -260,5 +260,7 @@ private:
     
     DISTANCE _distance;
 };
+
+} // namespace lmw
 
 #endif	/* TSVQ_H */

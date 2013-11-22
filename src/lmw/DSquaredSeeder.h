@@ -6,6 +6,7 @@
 //#include "SVector.h"
 #include "StdIncludes.h"
 
+namespace lmw {
 
 template <typename T, typename DistanceFunc>
 class DSquaredSeeder : public Seeder<T> {
@@ -106,6 +107,7 @@ public:
 	
 };
 
+} // namespace lmw
 
 #endif
 

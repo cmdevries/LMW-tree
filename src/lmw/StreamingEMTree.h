@@ -6,6 +6,8 @@
 #include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
+namespace lmw {
+
 /**
  * Visits all the clusters in a Streaming EM-tree along the insertion path.
  */
@@ -34,10 +36,6 @@ public:
  * 
  * T is the type of vector stored in the node.
  * 
- * DISTANCE is the distance function to use when comparing pairs of T.
- * 
- * PROTOTYPE is the function that summarizes a list of T to a single T.
- * 
  * ACCUMULATOR is the the type used for the accumulator vectors. For example,
  * with bit vectors, integer accumulators are used.
  * 
@@ -45,8 +43,10 @@ public:
  * auto a = ACCUMULATOR(dimensions);
  * They must also support the add operation at a given dimension,
  * a[i] += 1;
+ * 
+ * OPTIMIZER provides the functions necessary for optimization.
  */
-template <typename T, typename DISTANCE, typename PROTOTYPE, typename ACCUMULATOR>
+template <typename T, typename ACCUMULATOR, typename OPTIMIZER>
 class StreamingEMTree {
 public:
     explicit StreamingEMTree(Node<T>* root) :
@@ -176,29 +176,26 @@ private:
         uint64_t count; // how many vectors have been added to accumulator
         Mutex* mutex;
     };
-   
-    size_t nearest(Node<AccumulatorKey>* node, T* object, float* nearestDistance) {
-        size_t nearest = 0;
-        *nearestDistance = _dist(object, node->getKey(0)->key);
-        for (size_t i = 1; i < node->size(); i++) {
-            float dist = _dist(object, node->getKey(i)->key);
-            if (dist < *nearestDistance) {
-                *nearestDistance = dist;
-                nearest = i;
-            }
+    
+    struct Accessor {
+        T* operator()(AccumulatorKey* accumulatorKey) {
+            return accumulatorKey->key;
         }
-        return nearest;
-    }   
+    };
+       
+    size_t nearest(T* object, vector<AccumulatorKey*>& keys) {
+        return _optimizer.nearestIndex(object, keys, _accessor);
+    }
     
     void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
-        float nearestDistance = 0;
-        size_t nearestIndex = nearest(node, object, &nearestDistance);
+        size_t nearestIndex = nearest(object, node->getKeys());
         auto accumulatorKey = node->getKey(nearestIndex);
         uint64_t count = accumulatorKey->count;
         double sumSquaredError = accumulatorKey->sumSquaredError;
         if (!node->isLeaf()) {
-            count = objCount(node->getChild(nearestIndex));
-            sumSquaredError = sumSquaredError(node->getChild(nearestIndex));
+            auto child = node->getChild(nearestIndex);
+            count = objCount(child);
+            sumSquaredError = sumSquaredError(child);
         }
         double RMSE = sqrt(sumSquaredError / count);
         visitor.accept(accumulatorKey->key, level, RMSE, count);
@@ -208,13 +205,12 @@ private:
     }    
     
     void insert(Node<AccumulatorKey>* node, T* object) {
-        float nearestDistance = 0;
-        size_t nearestIndex = nearest(node, object, &nearestDistance);
+        size_t nearestIndex = nearest(object, node->getKeys());
         if (node->isLeaf()) {
             auto accumulatorKey = node->getKey(nearestIndex);
             accumulatorKey->mutex->lock();
             T* key = accumulatorKey->key;
-            accumulatorKey->sumSquaredError += nearestDistance * nearestDistance;
+            accumulatorKey->sumSquaredError += _optimizer.squaredDistance(object, key);
             ACCUMULATOR* accumulator = accumulatorKey->accumulator;
             for (size_t i = 0; i < accumulator->size(); i++) {
                 (*accumulator)[i] += (*object)[i];
@@ -410,8 +406,8 @@ private:
     }    
 
     Node<AccumulatorKey>* _root;
-    DISTANCE _dist;
-    PROTOTYPE _prototype;
+    OPTIMIZER _optimizer;
+    Accessor _accessor;
     
     // How mamny vectors to read at once when processing a stream.
     int _readsize = 1000;
@@ -420,5 +416,6 @@ private:
     int _maxtokens = 1024;
 };
  
-#endif	/* STREAMINGEMTREE_H */
+} // namespace lmw
 
+#endif	/* STREAMINGEMTREE_H */

@@ -1,7 +1,7 @@
 #ifndef JOURNALPAPEREXPERIMENTS_H
 #define	JOURNALPAPEREXPERIMENTS_H
 
-#include "StdIncludes.h"
+#include "lmw/StdIncludes.h"
 #include "ExperimentTypedefs.h"
 
 void testMeanVersusNNSpeed(vector<SVector<bool>*>& vectors) {
@@ -99,7 +99,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 vector<double> seconds;
                 for (int maxiters = 0; maxiters <= iterRange; ++maxiters) {
                     boost::timer::auto_cpu_timer all;
-                    TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiters);
+                    TSVQ_t tsvq(m, depth, maxiters);
                     tsvq.cluster(vectors);
                     all.stop();
                     cout << "." << flush;
@@ -132,7 +132,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                         splits.push_back(m);
                     }
                     boost::timer::auto_cpu_timer all;
-                    EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                    EMTree_t emt(m);
                     if (maxiters == 0) {
                         // no iterations so dont update means
                         bool updateMeans = false;
@@ -179,7 +179,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 vector<double> seconds;
                 for (int m : orders) {
                     boost::timer::auto_cpu_timer all;
-                    TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiters);
+                    TSVQ_t tsvq(m, depth, maxiters);
                     tsvq.cluster(vectors);
                     all.stop();
                     cout << "." << flush;
@@ -214,7 +214,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                         splits.push_back(m);
                     }
                     boost::timer::auto_cpu_timer all;
-                    EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                    EMTree_t emt(m);
                     // seeding does first iteration
                     emt.seed(vectors, splits);
                     for (int i = 1; i < maxiters; ++i) {
@@ -258,7 +258,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
             vector<double> seconds;
             for (int m : orders) {
                 boost::timer::auto_cpu_timer all;
-                TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, maxiters);
+                TSVQ_t tsvq(m, depth, maxiters);
                 tsvq.cluster(vectors);
                 all.stop();
                 cout << "." << flush;
@@ -299,7 +299,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                     splits.push_back(m);
                 }
                 boost::timer::auto_cpu_timer all;
-                EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+                EMTree_t emt(m);
                 // seeding does first iteration
                 emt.seed(vectors, splits);
                 for (int i = 1; i < maxiters; ++i) {
@@ -337,7 +337,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
             vector<int> targetClusters = {1300, 1800, 2900, 4000};
             for (int k : targetClusters) {
                 boost::timer::auto_cpu_timer all;
-                clustererType kmeans(k);
+                KMeans_t kmeans(k);
                 kmeans.setMaxIters(maxiters);
                 int finalClusters = kmeans.cluster(vectors).size();
                 all.stop();
@@ -373,7 +373,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 cout << "Building K-tree of order m=" << m
                         << ", k-means maxiters=" << maxiters << endl;
                 boost::timer::auto_cpu_timer all;
-                KTree<vecType, clustererType, distanceType, protoType> kt(m, maxiters);
+                KTree_t kt(m, maxiters);
                 for (size_t i = 0; i < vectors.size(); i++) {
                     kt.add(vectors[i]);
                     size_t next = i + 1;
@@ -417,7 +417,7 @@ void journalPaperExperiments(vector<SVector<bool>*>& vectors) {
                 cout << "Building DELAYED UPDATES delay=1000 K-tree of order m=" << m
                         << ", k-means maxiters=" << maxiters << endl;
                 boost::timer::auto_cpu_timer all;
-                KTree<vecType, clustererType, distanceType, protoType> kt(m, maxiters);
+                KTree_t kt(m, maxiters);
                 kt.setDelayedUpdates(true);
                 kt.setUpdateDelay(1000);
                 for (size_t i = 0; i < vectors.size(); i++) {
@@ -467,7 +467,7 @@ void clueweb() {
                 << ", k-means maxiters=" << maxiters << endl;
         boost::timer::auto_cpu_timer all;
         boost::timer::auto_cpu_timer building;
-        KTree<vecType, clustererType, distanceType, protoType> kt(m, maxiters);
+        KTree_t kt(m, maxiters);
         kt.setDelayedUpdates(true);
         kt.setUpdateDelay(1000);
         for (size_t i = 0; i < vectors.size(); i++) {
@@ -504,7 +504,7 @@ void clueweb() {
         int m = (int)sqrt(clusters);        
         deque<int> splits = {m, m};
         boost::timer::auto_cpu_timer all;
-        EMTree<vecType, clustererType, distanceType, protoType> emt(m);
+        EMTree_t emt(m);
         // seeding does first iteration
         {
             cout << "----" << endl;
@@ -561,7 +561,7 @@ void clueweb() {
         int depth = 3;
         int tsvqMaxiters = 5;        
         boost::timer::auto_cpu_timer tsvqTimer;
-        TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, tsvqMaxiters);
+        TSVQ_t tsvq(m, depth, tsvqMaxiters);
         tsvq.cluster(sample);
         tsvqTimer.stop();
         tsvq.printStats();
@@ -570,7 +570,7 @@ void clueweb() {
         
         // 2 iterations of EM-tree on all data, using TSVQ sample as seed
         int emtreeMaxiters = 2;
-        EMTree<vecType, clustererType, distanceType, protoType> emtree(tsvq.getMWayTree());
+        EMTree_t emtree(tsvq.getMWayTree());
         boost::timer::auto_cpu_timer emtreeTimer;
         {
             boost::timer::auto_cpu_timer iter;

@@ -3,6 +3,8 @@
 
 #include "StdIncludes.h"
 
+namespace lmw {
+
 template <typename T>
 class Node {
 public:
@@ -153,5 +155,7 @@ private:
     // Will the keys be deleted?
     bool _ownsKeys;
 };
+
+} // namespace lmw
 
 #endif	/* NODE_H */

@@ -3,6 +3,8 @@
 
 #include "StdIncludes.h"
 
+namespace lmw {
+
 // Defines for bit vector
 #define W_SIZE 64
 #define BITS_WS 6
@@ -320,8 +322,6 @@ public:
 
 };
 
-
+} // namespace lmw
 
 #endif
-
-

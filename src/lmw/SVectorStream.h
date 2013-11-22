@@ -4,7 +4,7 @@
 #include "StdIncludes.h"
 #include "SVector.h"
 
-using namespace std;
+namespace lmw {
 
 /**
  * The VectorStream concept provides a stream of vectors usually read from disk. 
@@ -94,6 +94,8 @@ private:
     ifstream _signatureStream;
     size_t _signatureLength; // the length of signatures in _signatureStream
 };
+
+} // namespace lmw
 
 #endif	/* VECTORSTREAM_H */
 

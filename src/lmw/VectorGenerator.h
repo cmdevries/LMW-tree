@@ -3,6 +3,7 @@
 
 #include "StdIncludes.h"
 
+namespace lmw {
 
 template <typename RndGen, typename Vec> 
 class VectorGenerator {
@@ -79,6 +80,7 @@ public:
 	
 };
 
+} // namespace lmw
 
 #endif
 

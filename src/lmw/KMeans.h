@@ -9,7 +9,9 @@
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_for.h"
 
-template <typename T, typename SEEDER, typename OPTIMIZER, typename PROTOTYPE>
+namespace lmw {
+
+template <typename T, typename SEEDER, typename OPTIMIZER>
 class KMeans : public Clusterer<T> {
 public:
 
@@ -198,7 +200,7 @@ private:
                     for (size_t i = r.begin(); i != r.end(); ++i) {
                         Cluster<T>* c = _clusters[i];
                         if (c->size() > 0) {
-                            _protoF(c->getCentroid(), c->getNearestList(), _weights);
+                            _optimizer.updatePrototype(c->getCentroid(), c->getNearestList(), _weights);
                         }
                     }
                 }
@@ -206,11 +208,8 @@ private:
         tbb::atomic_fence(); // make sure all writes are visible on all CPUs
     }
 
-    // Seeder
     SEEDER *_seeder;
-
     OPTIMIZER _optimizer;
-    PROTOTYPE _protoF;
     
     // enforce the number of clusters required
     // if less than k clusters are produced, shuffle vectors randomly and split into k cluster
@@ -245,7 +244,7 @@ private:
     atomic<bool> _converged;    
 };
 
-
+} // namespace lmw
 
 #endif	/* KMEANS_H */
 
