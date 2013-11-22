@@ -15,7 +15,10 @@ public:
     ClusterVisitor() { }
     virtual ~ClusterVisitor() { }    
     
-    virtual void accept(int level, T* cluster, double RMSE, uint64_t objectCount) = 0;    
+    /**
+     * parentCluster is NULL for root nodes
+     */
+    virtual void accept(int level, T* parentCluster, T* cluster, double RMSE, uint64_t objectCount) = 0;    
 };
 
 class ClusterStats : public ClusterVisitor<SVector<bool>> {
@@ -25,14 +28,14 @@ public:
             stringstream ss;
             ss << filenamePrefix << "_level" << level;
             ofstream* l = new ofstream(ss.str() + "_stats.txt");
-            *l << "cluster ID, RMSE, object count" << endl;
+            *l << "parent cluster ID, cluster ID, RMSE, object count" << endl;
             _levels.push_back(l);
         }
         // TODO(cdevries): check state of streams        
     }    
     
-    void accept(int level, SVector<bool>* cluster, double RMSE, uint64_t objectCount) {
-        *_levels[level - 1] << hex << size_t(cluster) << dec << "," << RMSE << "," << objectCount << endl;
+    void accept(int level, SVector<bool>* parentCluster, SVector<bool>* cluster, double RMSE, uint64_t objectCount) {
+        *_levels[level - 1] << hex << size_t(parentCluster) << "," << size_t(cluster) << dec << "," << RMSE << "," << objectCount << endl;
     }
     
 private:

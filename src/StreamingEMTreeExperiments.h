@@ -26,8 +26,8 @@ StreamingEMTree_t* streamingEMTreeInit() {
     }
 
     // run TSVQ to build tree on sample
-    const int m = 30;
-    const int depth = 3;
+    const int m = 10;
+    const int depth = 4;
     const int maxiter = 0;
     TSVQ_t tsvq(m, depth, maxiter);
 
@@ -51,23 +51,44 @@ const char wikiDocidFile[] = "data/wiki.4096.docids";
 const char wikiSignatureFile[] = "data/wiki.4096.sig";
 const size_t wikiSignatureLength = 4096;
     
-void writeClusters(StreamingEMTree_t* emtree) {
+
+void report(StreamingEMTree_t* emtree) {
+    int maxDepth = emtree->getMaxLevelCount();
+    cout << "max depth = " << maxDepth << endl;
+    for (int i = 0; i < maxDepth; i++) {
+        cout << "cluster count level " << i + 1 << " = "
+                << emtree->getClusterCount(i + 1) << endl;
+    }
+    cout << "streaming EM-tree had " << emtree->getObjCount() << " vectors inserted" << endl;
+    cout << "RMSE = " << emtree->getRMSE() << endl;       
+}
+
+void insertWriteClusters(StreamingEMTree_t* emtree) {
     // open files
     SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
 
     // setup output streams for all levels in the tree
     const string prefix = "wikipedia_clusters";
     
+    // insert and write cluster assignments
+    {
+        boost::timer::auto_cpu_timer insert("inserting and writing clusters: %w seconds\n");   
+        ClusterWriter cw(emtree->getMaxLevelCount(), prefix);
+        emtree->visit(vs, cw);
+    }
+    
+    // prune
+    cout << emtree->prune() << " nodes pruned" << endl;
+    
+    // report tree stats
+    report(emtree);
+    
+    // write out cluster statistics
     {
         boost::timer::auto_cpu_timer update("writing cluster stats: %w seconds\n");    
         ClusterStats cs(emtree->getMaxLevelCount(), prefix);
         emtree->visit(cs);
-    }
-    {
-        boost::timer::auto_cpu_timer update("writing clusters: %w seconds\n");   
-        ClusterWriter cw(emtree->getMaxLevelCount(), prefix);
-        emtree->visit(vs, cw);
-    }
+    }    
 }
 
 void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
@@ -83,18 +104,12 @@ void streamingEMTreeInsertPruneReport(StreamingEMTree_t* emtree) {
     insert.report();
 
     // prune
+    cout << "pruning" << endl;
     int pruned = emtree->prune();
     cout << pruned << " nodes pruned" << endl;
 
-    // report
-    int maxDepth = emtree->getMaxLevelCount();
-    cout << "max depth = " << maxDepth << endl;
-    for (int i = 0; i < maxDepth; i++) {
-        cout << "cluster count level " << i + 1 << " = "
-                << emtree->getClusterCount(i + 1) << endl;
-    }
-    cout << "streaming EM-tree had " << emtree->getObjCount() << " vectors inserted" << endl;
-    cout << "RMSE = " << emtree->getRMSE() << endl;    
+    // report tree stats
+    report(emtree);
 }
 
 void streamingEMTree() {
@@ -110,17 +125,18 @@ void streamingEMTree() {
     const int maxIters = 2;
     StreamingEMTree_t* emtree = streamingEMTreeInit();
     cout << endl << "Streaming EM-tree:" << endl;
-    for (int i = 0; i < maxIters; i++) {
+    for (int i = 0; i < maxIters - 1; i++) {
         cout << "ITERATION " << i << endl;
         streamingEMTreeInsertPruneReport(emtree);
-        if (i != maxIters - 1) {
+        {
             boost::timer::auto_cpu_timer update("update streaming EM-tree: %w seconds\n");
             emtree->update();
-        }
+        }        
         cout << "-----" << endl << endl;
     }
-        
-    writeClusters(emtree);
+    
+    // last iteration writes cluster assignments and does not update accumulators
+    insertWriteClusters(emtree);
 }
 
 #endif	/* STREAMINGEMTREEEXPERIMENTS_H */

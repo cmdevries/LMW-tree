@@ -23,7 +23,10 @@ public:
 
             entries[i].numBits = numBits;
         }
-
+    }
+    
+    ~BitMapList16() {
+        delete[] entries;
     }
 
     void add(unsigned short idx, int* counts, int weight) const {
