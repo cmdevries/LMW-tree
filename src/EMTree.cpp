@@ -30,7 +30,7 @@
 int main(int argc, char** argv) {
     std::srand(std::time(0));
     
-    if (true) {
+    if (false) {
         streamingEMTree();
     } else if (false) {
         clueweb();
@@ -54,9 +54,9 @@ int main(int argc, char** argv) {
         if (!vectors.empty() && !subset.empty()) {
             //sigKmeansCluster(subset, "subset_clusters.txt");
             //journalPaperExperiments(subset);
-            //sigKTreeCluster(subset);
+            sigKTreeCluster(subset);
             //sigTSVQCluster(subset);
-            sigEMTreeCluster(subset);
+            //sigEMTreeCluster(subset);
             //testHistogram(vectors);
             //testMeanVersusNNSpeed(vectors);
             //testReadVectors();

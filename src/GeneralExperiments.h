@@ -8,7 +8,7 @@ void sigKmeansCluster(vector<SVector<bool>*> &vectors, const string& clusterFile
     // Define the types we want to use
     int k = 36;
     int maxiters = 10;
-    clustererType clusterer(k);
+    KMeans_t clusterer(k);
     clusterer.setMaxIters(maxiters);
     {
         boost::timer::auto_cpu_timer all;
@@ -35,7 +35,7 @@ void sigTSVQCluster(vector<SVector<bool>*> &vectors) {
     vector<int> nodeSizes = {10};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
-        TSVQ<vecType, clustererType, distanceType> tsvq(m, depth, iters);
+        TSVQ_t tsvq(m, depth, iters);
         boost::timer::auto_cpu_timer all;
         tsvq.cluster(vectors);
         tsvq.printStats();
@@ -51,7 +51,7 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
     vector<int> nodeSizes = {30}; //{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
     for (int m : nodeSizes) {
         std::cout << "-------------------" << std::endl;
-        EMTree<vecType, clustererType, OPTIMIZER> emt(m);
+        EMTree_t emt(m);
         deque<int> splits;
         for (int i = 0; i < depth - 1; i++) {
             splits.push_back(m);
@@ -87,12 +87,12 @@ void sigEMTreeCluster(vector<SVector<bool>*> &vectors) {
 }
 
 void sigKTreeCluster(vector<SVector<bool>*> &vectors) {
-    ClusterCounter<nodeType> counter;
+    ClusterCounter<Node<SVector<bool>>> counter;
 
     // KTree algorithm
     int order = 10;
     int maxiters = 2;
-    KTree<vecType, clustererType, distanceType, protoType> kt(order, maxiters);
+    KTree_t kt(order, maxiters);
 
     boost::timer::auto_cpu_timer t;
 

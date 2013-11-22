@@ -78,7 +78,7 @@ public:
 private:
     /**
      * The default accessor is used for simple key types where the vector of
-     * other keys match the object.
+     * other objects match the object.
      */
     struct DefaultAccessor {
         T* operator()(T* key) {
