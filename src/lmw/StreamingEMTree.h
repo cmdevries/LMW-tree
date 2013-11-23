@@ -5,7 +5,7 @@
 #include "SVectorStream.h"
 #include "ClusterVisitor.h"
 #include "InsertVisitor.h"
-#include "tbb/queuing_mutex.h"
+#include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
 namespace lmw {
@@ -142,7 +142,7 @@ public:
     }
 
 private:
-    typedef tbb::queuing_mutex Mutex;
+    typedef tbb::mutex Mutex;
     
     struct AccumulatorKey {
         AccumulatorKey() : key(NULL), sumSquaredError(0), accumulator(NULL),

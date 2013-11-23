@@ -3,8 +3,6 @@
 
 #include "StdIncludes.h"
 #include "tbb/mutex.h"
-#include "tbb/concurrent_queue.h"
-#include "tbb/queuing_mutex.h"
 
 namespace lmw {
 
@@ -50,8 +48,7 @@ public:
     }  
     
 private:
-    // using a scalable mutex because this is locked frequently
-    typedef tbb::queuing_mutex Mutex;
+    typedef tbb::mutex Mutex;
     vector<Mutex> _mutexes;
     vector<ofstream*> _levels;
 };
