@@ -16,6 +16,7 @@
 #include <functional>
 #include <set>
 #include <sstream>
+#include <unordered_map>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -43,6 +44,7 @@ using std::ofstream;
 using std::stringstream;
 using std::ios;
 using std::runtime_error;
+using std::unordered_map;
 
 typedef boost::mt19937 RND_ENG;
 
