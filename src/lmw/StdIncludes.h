@@ -15,8 +15,8 @@
 #include <atomic>
 #include <functional>
 #include <set>
+#include <unordered_set>
 #include <sstream>
-#include <unordered_map>
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -39,12 +39,15 @@ using std::flush;
 using std::max;
 using std::atomic;
 using std::set;
+using std::unordered_set;
 using std::ifstream;
 using std::ofstream;
 using std::stringstream;
 using std::ios;
 using std::runtime_error;
-using std::unordered_map;
+using std::hex;
+using std::dec;
+using std::ends;
 
 typedef boost::mt19937 RND_ENG;
 

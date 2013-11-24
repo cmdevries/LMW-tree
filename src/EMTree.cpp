@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
             sigKmeansCluster(subset, "subset_clusters.txt");
             //journalPaperExperiments(subset);
             //sigKTreeCluster(subset);
-            sigTSVQCluster(subset);
-            sigEMTreeCluster(subset);
+            //sigTSVQCluster(subset);
+            //sigEMTreeCluster(subset);
             //testHistogram(vectors);
             //testMeanVersusNNSpeed(vectors);
             //testReadVectors();

@@ -3,26 +3,12 @@
 
 #include "StdIncludes.h"
 #include "SVectorStream.h"
+#include "ClusterVisitor.h"
+#include "InsertVisitor.h"
 #include "tbb/mutex.h"
 #include "tbb/pipeline.h"
 
 namespace lmw {
-
-/**
- * Visits all the clusters in a Streaming EM-tree along the insertion path.
- */
-template <typename T>
-class InsertVisitor {
-public:
-    InsertVisitor() { }
-    virtual ~InsertVisitor() { }
-    
-    /**
-     * Must be thread safe. It can be called from multiple threads.
-     */
-    virtual void accept(T* clusterCenter, int level, double RMSE,
-            uint64_t objectCount) = 0;
-};
 
 /**
  * The streaming version of the EM-tree algorithm does not store the
@@ -82,13 +68,17 @@ public:
 
         return totalRead;
     }
+
+    void visit(ClusterVisitor<T>& visitor) {
+        visit(NULL, _root, visitor);
+    }    
     
     void visit(vector<T*>& data, InsertVisitor<T>& visitor) {
         for (T* object : data) {
             visit(_root, object, visitor);
         }
     }
-
+    
     size_t insert(SVectorStream<T>& vs) {
         size_t totalRead = 0;
 
@@ -186,29 +176,41 @@ private:
     size_t nearest(T* object, vector<AccumulatorKey*>& keys) {
         return _optimizer.nearestIndex(object, keys, _accessor);
     }
+
+    void visit(T* parentKey, Node<AccumulatorKey>* node, ClusterVisitor<T>& visitor, int level = 1) {
+        for (size_t i = 0; i < node->size(); i++) {
+            auto accumulatorKey = node->getKey(i);
+            uint64_t count = objCount(node, i);
+            double SSE = sumSquaredError(node, i);
+            double RMSE = sqrt(SSE / count);
+            visitor.accept(level, parentKey, accumulatorKey->key, RMSE, count);
+            if (!node->isLeaf()) {
+                visit(accumulatorKey->key, node->getChild(i), visitor, level + 1);
+            }
+        }
+    }
     
     void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
         size_t nearestIndex = nearest(object, node->getKeys());
         auto accumulatorKey = node->getKey(nearestIndex);
-        uint64_t count = accumulatorKey->count;
-        double sumSquaredError = accumulatorKey->sumSquaredError;
-        if (!node->isLeaf()) {
-            auto child = node->getChild(nearestIndex);
-            count = objCount(child);
-            sumSquaredError = sumSquaredError(child);
-        }
-        double RMSE = sqrt(sumSquaredError / count);
-        visitor.accept(accumulatorKey->key, level, RMSE, count);
-        if (!node->isLeaf()) {
-            visit(node->getChild(nearestIndex), object, level + 1);
+        visitor.accept(level, object, accumulatorKey->key);
+        if (node->isLeaf()) {
+            // update stats but not accumulators
+            Mutex::scoped_lock lock(*accumulatorKey->mutex);
+            accumulatorKey->sumSquaredError +=
+                    _optimizer.squaredDistance(object, accumulatorKey->key);
+            accumulatorKey->count++;
+        } else {
+            visit(node->getChild(nearestIndex), object, visitor, level + 1);
         }
     }    
     
     void insert(Node<AccumulatorKey>* node, T* object) {
         size_t nearestIndex = nearest(object, node->getKeys());
         if (node->isLeaf()) {
+            // update stats and accumulators
             auto accumulatorKey = node->getKey(nearestIndex);
-            accumulatorKey->mutex->lock();
+            Mutex::scoped_lock lock(*accumulatorKey->mutex);
             T* key = accumulatorKey->key;
             accumulatorKey->sumSquaredError += _optimizer.squaredDistance(object, key);
             ACCUMULATOR* accumulator = accumulatorKey->accumulator;
@@ -216,7 +218,6 @@ private:
                 (*accumulator)[i] += (*object)[i];
             }
             accumulatorKey->count++;
-            accumulatorKey->mutex->unlock();
         } else {
             insert(node->getChild(nearestIndex), object);
         }
@@ -224,13 +225,13 @@ private:
 
     int prune(Node<AccumulatorKey>* node) {
         int pruned = 0;
-        vector<Node<AccumulatorKey>*>& children = node->getChildren();
-        for (int i = 0; i < children.size(); i++) {
-            if (objCount(children[i]) == 0) {
+        for (int i = 0; i < node->size(); i++) {
+            if (objCount(node, i) == 0) {
                 node->remove(i);
                 pruned++;
-            } else {
-                pruned += prune(children[i]);
+            }
+            if (!node->isLeaf()) {
+                pruned += prune(node->getChild(i));
             }
         }
         node->finalizeRemovals();
@@ -349,6 +350,14 @@ private:
         });
     }
     
+    double sumSquaredError(Node<AccumulatorKey>* node, size_t i) {
+        if (node->isLeaf()) {
+            return node->getKey(i)->sumSquaredError;
+        } else {
+            return sumSquaredError(node->getChild(i));
+        }
+    }
+    
     double sumSquaredError(Node<AccumulatorKey>* node) {
         if (node->isLeaf()) {
             double localSum = 0;
@@ -363,6 +372,17 @@ private:
             }
             return localSum;
         }        
+    }
+    
+    /**
+     * Object count for cluster i in node.
+     */
+    uint64_t objCount(Node<AccumulatorKey>* node, size_t i) {
+        if (node->isLeaf()) {
+            return node->getKey(i)->count;
+        } else {
+            return objCount(node->getChild(i));
+        }
     }
     
     uint64_t objCount(Node<AccumulatorKey>* node) {

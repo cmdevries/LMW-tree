@@ -24,6 +24,10 @@ public:
             entries[i].numBits = numBits;
         }
     }
+    
+    ~BitMapList8() {
+        delete[] entries;
+    }
 
     void add(unsigned short idx, int* counts, int weight) const {
         //std::cout << "\n--  " << idx << " ... " << entries[idx].numBits;
