@@ -19,3 +19,5 @@ The package includes EM-tree, K-tree, k-means, TSVQ, repeated k-means,
 clustering, random projections, random indexing, hashing, bit signatures.
 
 LMW-tree is licensed under the BSD license.
+
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/924ebc6da96590c794151e4aadeb009b "githalytics.com")](http://githalytics.com/cmdevries/LMW-tree)
