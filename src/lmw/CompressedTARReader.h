@@ -22,6 +22,8 @@ namespace lmw {
 		CompressedTARReader(string fileName, string compressionType) :
 			CompressedArchiveReader(fileName, compressionType)
 		{
+			//Initialize a zero-filled block to compare against
+			memset(zeroBlock, 0, 512);
 		}
 
 		~CompressedTARReader() {
@@ -29,6 +31,16 @@ namespace lmw {
 		}
 
 		UnparsedFile* nextFile() {
+
+			in.read((char*)&currentFileHeader, 512);
+
+			//When a block with zeroes-only is found, the TAR archive ends
+			if (memcmp(&currentFileHeader, zeroBlock, 512) == 0) {
+				cout << "Found TAR end\n";
+				return NULL;
+			}
+
+
 
 			return &_file;
 		}
@@ -118,7 +130,9 @@ namespace lmw {
 
 	private:
 
-
+		char zeroBlock[512];
+		TARFileHeader currentFileHeader;
+		bool nextEntryHasLongName = false;
 	};
 
 } // namespace lmw

@@ -4,12 +4,17 @@
 #include "lmw/StdIncludes.h"
 #include "lmw/UnparsedFile.h"
 
+#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 
 namespace lmw {
+
+	using boost::iostreams::filtering_istream;
+	using boost::iostreams::gzip_decompressor;
+	using boost::iostreams::bzip2_decompressor;
 
 	//-----------------------------------------------------------
 	// Abstract Class for reading compressed archive files.
@@ -26,10 +31,19 @@ namespace lmw {
 			_fileName(fileName),
 			_compressionType(compressionType)			
 		{
-
+			fin.open(_fileName, std::ios_base::in | std::ios_base::binary);
+			if (_compressionType == "gz" || _compressionType == "tgz") {
+				in.push(gzip_decompressor());
+			}
+			else if (_compressionType == "bz2" || _compressionType == "bzip2") {
+				in.push(bzip2_decompressor());
+			}
+			in.push(fin);
 		}
 
 		~CompressedArchiveReader() {
+			// Cleanup
+			fin.close();
 		}	
 
 		// Pure virtual method to be overriden
@@ -40,6 +54,9 @@ namespace lmw {
 		string _compressionType;
 		string _fileName;
 		UnparsedFile _file;
+
+		ifstream fin;
+		filtering_istream in;
 
 	};
 
