@@ -16,6 +16,7 @@
 #include <functional>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 #include <sstream>
 
 #include <boost/random.hpp>
@@ -40,6 +41,7 @@ using std::max;
 using std::atomic;
 using std::set;
 using std::unordered_set;
+using std::unordered_map;
 using std::ifstream;
 using std::ofstream;
 using std::stringstream;
