@@ -311,8 +311,8 @@ private:
     Node<T>* nearestChild(Node<T>* n, T* vec) {
         vector<T*>& keys = n->getKeys();
         vector<Node<T>*>& children = n->getChildren();
-        size_t nearest = _optimizer.nearestIndex(vec, keys);
-        return children[nearest];
+        auto nearest = _optimizer.nearest(vec, keys);
+        return children[nearest.index];
     }
 
     void pushDownNoUpdate(Node<T> *n, T *vec) {

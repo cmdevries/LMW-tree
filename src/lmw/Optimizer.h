@@ -31,6 +31,13 @@ struct Maximize {
     }
 };
 
+template <typename KEY>
+struct Nearest {
+    KEY* key;
+    size_t index;
+    double distance;
+};
+    
 template <typename T, typename DISTANCE, typename COMPARATOR, typename PROTOTYPE>
 class Optimizer {
 public:
@@ -39,16 +46,9 @@ public:
         _prototype(prototype, neighbours, weights);
     }
     
-    T* nearest(T* object, vector<T*>& others) {
-        size_t nearestIndex = 0;
-        return nearest(object, others, &nearestIndex);
+    Nearest<T> nearest(T* object, vector<T*>& others) {
+        return nearestAccessor(object, others, _defaultAccessor);
     } 
-
-    size_t nearestIndex(T* object, vector<T*>& others) {
-        size_t nearestIndex = 0;
-        nearest(object, others, &nearestIndex);
-        return nearestIndex;
-    }
 
     /**
      * This function provides access to a more complex KEY via used of an
@@ -59,12 +59,10 @@ public:
      * more complex key type.
      */
     template <typename KEY, typename ACCESSOR>
-    size_t nearestIndex(T* object, vector<KEY*>& others, ACCESSOR& accessor) {
-        size_t nearestIndex = 0;
-        nearest(object, others, &nearestIndex, accessor);
-        return nearestIndex;
+    Nearest<KEY> nearest(T* object, vector<KEY*>& others, ACCESSOR& accessor) {
+        return nearestAccessor(object, others, accessor);
     }
-
+    
     double squaredDistance(T* object1, T* object2) {
         return _distance.squared(object1, object2);
     }
@@ -87,23 +85,19 @@ private:
             return key;
         }
     };
-    
-    T* nearest(T* object, vector<T*>& others, size_t* nearestIndex) {
-        return nearest(object, others, nearestIndex, _defaultAccessor);
-    }
-    
+
     template <typename KEY, typename ACCESSOR>
-    KEY* nearest(T* object, vector<KEY*>& others, size_t* nearestIndex, ACCESSOR& accessor) {
-        *nearestIndex = 0;
+    Nearest<KEY> nearestAccessor(T* object, vector<KEY*>& others, ACCESSOR& accessor) {
+        size_t nearestIndex = 0;
         double nearestDistance = _distance(object, accessor(others[0]));
         for (size_t i = 1; i < others.size(); ++i) {
             double currentDistance = _distance(object, accessor(others[i]));
             if (_comp(currentDistance, nearestDistance)) {
                 nearestDistance = currentDistance;
-                *nearestIndex = i;
+                nearestIndex = i;
             }
         }
-        return others[*nearestIndex];
+        return {others[nearestIndex], nearestIndex, nearestDistance};
     }  
     
     COMPARATOR _comp;

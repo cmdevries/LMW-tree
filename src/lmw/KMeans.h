@@ -166,11 +166,11 @@ private:
                 [&](const tbb::blocked_range<size_t>& r) {
                     for (size_t i = r.begin(); i != r.end(); ++i) {
                         //size_t nearest = nearestObj(data[i], _centroids);
-                        size_t nearest = _optimizer.nearestIndex(data[i], _centroids);
-                        if (nearest != _nearestCentroid[i]) {
+                        auto nearest = _optimizer.nearest(data[i], _centroids);
+                        if (nearest.index != _nearestCentroid[i]) {
                             _converged = false;
                         }
-                        _nearestCentroid[i] = nearest;
+                        _nearestCentroid[i] = nearest.index;
                     }
                 }
         );

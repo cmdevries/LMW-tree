@@ -173,10 +173,6 @@ private:
         }
     };
        
-    size_t nearest(T* object, vector<AccumulatorKey*>& keys) {
-        return _optimizer.nearestIndex(object, keys, _accessor);
-    }
-
     void visit(T* parentKey, Node<AccumulatorKey>* node, ClusterVisitor<T>& visitor, int level = 1) {
         for (size_t i = 0; i < node->size(); i++) {
             auto accumulatorKey = node->getKey(i);
@@ -190,10 +186,14 @@ private:
         }
     }
     
+    Nearest<AccumulatorKey> nearestKey(T* object, Node<AccumulatorKey>* node) {
+        return _optimizer.nearest(object, node->getKeys(), _accessor);
+    }
+    
     void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
-        size_t nearestIndex = nearest(object, node->getKeys());
-        auto accumulatorKey = node->getKey(nearestIndex);
-        visitor.accept(level, object, accumulatorKey->key);
+        auto nearest = nearestKey(object, node);
+        auto accumulatorKey = nearest.key;
+        visitor.accept(level, object, accumulatorKey->key, nearest.distance);
         if (node->isLeaf()) {
             // update stats but not accumulators
             Mutex::scoped_lock lock(*accumulatorKey->mutex);
@@ -201,15 +201,15 @@ private:
                     _optimizer.squaredDistance(object, accumulatorKey->key);
             accumulatorKey->count++;
         } else {
-            visit(node->getChild(nearestIndex), object, visitor, level + 1);
+            visit(node->getChild(nearest.index), object, visitor, level + 1);
         }
     }    
     
     void insert(Node<AccumulatorKey>* node, T* object) {
-        size_t nearestIndex = nearest(object, node->getKeys());
+        auto nearest = nearestKey(object, node);
         if (node->isLeaf()) {
             // update stats and accumulators
-            auto accumulatorKey = node->getKey(nearestIndex);
+            auto accumulatorKey = nearest.key;
             Mutex::scoped_lock lock(*accumulatorKey->mutex);
             T* key = accumulatorKey->key;
             accumulatorKey->sumSquaredError += _optimizer.squaredDistance(object, key);
@@ -219,7 +219,7 @@ private:
             }
             accumulatorKey->count++;
         } else {
-            insert(node->getChild(nearestIndex), object);
+            insert(node->getChild(nearest.index), object);
         }
     }
 
@@ -229,8 +229,7 @@ private:
             if (objCount(node, i) == 0) {
                 node->remove(i);
                 pruned++;
-            }
-            if (!node->isLeaf()) {
+            } else if (!node->isLeaf()) {
                 pruned += prune(node->getChild(i));
             }
         }

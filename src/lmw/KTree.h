@@ -309,9 +309,8 @@ private:
             n->add(vec); // Finished
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
-            vector<T*>& keys = n->getKeys();
-            size_t nearest = _optimizer.nearestIndex(vec, keys);
-            pushDownNoUpdate(n->getChild(nearest), vec);
+            auto nearest = _optimizer.nearest(vec, n->getKeys());
+            pushDownNoUpdate(n->getChild(nearest.index), vec);
         }
     }
 
@@ -328,8 +327,8 @@ private:
         } else { // It is an internal node.
             // recurse via nearest neighbour cluster
             vector<T*>& keys = n->getKeys();
-            size_t nearest = _optimizer.nearestIndex(vec, keys);
-            result = pushDown(n->getChild(nearest), vec);
+            auto nearest = _optimizer.nearest(vec, keys);
+            result = pushDown(n->getChild(nearest.index), vec);
             if (result.isSplit) {
                 updatePrototype(result._child1, result._key1);
                 updatePrototype(result._child2, result._key2);
@@ -345,7 +344,7 @@ private:
                 }
             } else {
                 if (!_delayedUpdates || (_delayedUpdates && _added % _updateDelay == 0)) {
-                    updatePrototype(n->getChild(nearest), n->getKey(nearest));
+                    updatePrototype(n->getChild(nearest.index), n->getKey(nearest.index));
                 }
             }
         }

@@ -18,7 +18,7 @@ public:
     /**
      * Must be thread safe. It can be called from multiple threads.
      */
-    virtual void accept(int level, T* object, T* cluster) = 0;
+    virtual void accept(int level, T* object, T* cluster, double distance) = 0;
 };
 
 class ClusterWriter : public InsertVisitor<SVector<bool>> {
@@ -29,7 +29,9 @@ public:
         for (int level = 1; level <= levels; level++) {
             stringstream ss;
             ss << filenamePrefix << "_level" << level;
-            _levels.push_back(new ofstream(ss.str() + "_clusters.txt"));
+            ofstream* l = new ofstream(ss.str() + "_clusters.txt");
+            *l << "object ID, cluster ID, distance to cluster center" << endl;
+            _levels.push_back(l);
         }
         // TODO(cdevries): check state of streams
     }
@@ -40,10 +42,10 @@ public:
         }
     }
     
-    void accept(int level, SVector<bool>* object, SVector<bool>* cluster) {
+    void accept(int level, SVector<bool>* object, SVector<bool>* cluster, double distance) {
         Mutex::scoped_lock lock(_mutexes[level - 1]);
         // using endl here causes the buffer to flush and sync() to be called which slows it down
-        *_levels[level - 1] << object->getID() << "," << hex << size_t(cluster) << "\n";
+        *_levels[level - 1] << object->getID() << "," << hex << size_t(cluster) << dec << "," << distance << "\n";
         return;
     }  
     
