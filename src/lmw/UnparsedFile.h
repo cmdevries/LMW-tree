@@ -3,14 +3,17 @@
 
 #include "lmw/StdIncludes.h"
 
+//#include <string>
+//using std::string;
+
+
 namespace lmw {
 
 	class UnparsedFile {
 
 	public:
 
-		UnparsedFile(const char* content) : _content(content) { 
-		
+		UnparsedFile() {		
 		}
 
 		~UnparsedFile() { };
@@ -32,14 +35,14 @@ namespace lmw {
 		}
 
 		void setMetadata(string key, string value) {
-			_metadata.insert(key, value);
+			_metadata[key] = value;
 		}
 
 	private:
 
 		long _fileSize;
 		const char* _content;
-		unordered_map<string, string> _metadata;
+		std::unordered_map<std::string, std::string> _metadata;
 	};
 
 

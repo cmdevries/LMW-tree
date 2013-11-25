@@ -1,6 +1,14 @@
 #ifndef COMPRESSED_WARC_READER_H
 #define COMPRESSED_WARC_READER_H
 
+//-------------------------------------------------------------------
+//
+// This implementation of a WARC file reader is based on
+// the implementation contained in the Indri search engine.
+// http://www.lemurproject.org/indri.php
+//
+//-------------------------------------------------------------------
+
 #include "CompressedArchiveReader.h"
 
 namespace lmw {
@@ -10,22 +18,20 @@ namespace lmw {
 
 		CompressedWARCReader() {
 
-
 		}
 
 		~CompressedWARCReader() {
+		}
 
+		UnparsedFile* nextFile() {
+
+			return &_file;
 		}
 
 
 	private:
 
-		struct BitMapList8Entry {
-			char numBits;
-			char posns[8];
-		};
 
-		BitMapList8Entry *entries;
 	};
 
 } // namespace lmw

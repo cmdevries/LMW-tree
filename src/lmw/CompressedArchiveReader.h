@@ -11,12 +11,11 @@
 
 namespace lmw {
 
-	//-------------------------------------------------------
+	//-----------------------------------------------------------
 	// Abstract Class for reading compressed archive files.
 	// 
-	// Override the nextDocument() method in the derived
-	// class.
-	//-------------------------------------------------------
+	// Derived classes should override the nextFile() method.
+	//-----------------------------------------------------------
 	class CompressedArchiveReader {
 	public:
 
@@ -34,13 +33,13 @@ namespace lmw {
 		}	
 
 		// Pure virtual method to be overriden
-		virtual UnparsedFile* nextDoument() = 0;
+		virtual UnparsedFile* nextFile() = 0;
 
-	private:
+	protected:
 
 		string _compressionType;
 		string _fileName;
-		UnparsedFile file;
+		UnparsedFile _file;
 
 	};
 
