@@ -61,13 +61,14 @@ template <typename T>
 struct euclideanDistance {
     double operator()(T *t1, T *t2) const {
         euclideanDistanceSq<T> squared;
-        return sqrt(squared(t1, t2));
+        return sqrt(_squared(t1, t2));
     }
     
     double squared(T *t1, T *t2) const {
-        euclideanDistanceSq<T> squared;
-        return squared(t1, t2);
-    }    
+        return _squared(t1, t2);
+    }
+    
+    euclideanDistanceSq<T> _squared;
 };
 
 } // namespace lmw
