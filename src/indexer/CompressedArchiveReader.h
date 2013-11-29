@@ -10,7 +10,7 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 
-namespace lmw {
+namespace indexer {
 
 	using boost::iostreams::filtering_istream;
 	using boost::iostreams::gzip_decompressor;
@@ -60,7 +60,7 @@ namespace lmw {
 
 	};
 
-} // namespace lmw
+} // namespace indexer
 
 #endif	/* COMPRESSED_ARCHIVE_READER_H */
 

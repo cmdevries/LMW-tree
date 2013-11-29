@@ -11,7 +11,7 @@
 
 #include "CompressedArchiveReader.h"
 
-namespace lmw {
+namespace indexer {
 
 	class CompressedWARCReader : public CompressedArchiveReader {
 	public:
@@ -34,7 +34,7 @@ namespace lmw {
 
 	};
 
-} // namespace lmw
+} // namespace indexer
 
 #endif	/* COMPRESSED_WARC_READER_H */
 

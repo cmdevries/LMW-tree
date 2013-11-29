@@ -12,7 +12,7 @@
 #include "CompressedArchiveReader.h"
 
 
-namespace lmw {
+namespace indexer {
 
 	#define ASCII_TO_NUMBER(num) ((num)-48) //Converts an ascii digit to the corresponding number (assuming it is an ASCII digit)
 
@@ -135,7 +135,7 @@ namespace lmw {
 		bool nextEntryHasLongName = false;
 	};
 
-} // namespace lmw
+} // namespace indexer 
 
 #endif	/* COMPRESSED_TAR_READER_H */
 
