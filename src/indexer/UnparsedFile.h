@@ -1,46 +1,86 @@
 #ifndef UNPARSED_FILE_H
 #define UNPARSED_FILE_H
 
+#include <istream>
 #include <map>
 #include <string>
 #include <vector>
 
+#include <boost/algorithm/string.hpp>
+
 namespace indexer {
 
+    using std::istream;
     using std::map;
     using std::string;
-	
+    using std::vector;
+
     class UnparsedFile {
-	public:
+    public:
 
-		UnparsedFile() {		
-		}
+        UnparsedFile() {
+        }
 
-		~UnparsedFile() { };
+        ~UnparsedFile() {
+        };
 
-		const vector<char>& getContent() const {
-			return _content;
-		}
+        vector<char>& getContent() {
+            return _content;
+        }
+        
+        void readContent(istream& is, int contentLength) {
+            _content.resize(contentLength);
+            is.read(&_content[0], contentLength);
+            if (!is) {
+                _content.resize(is.gcount());
+            }
+        }
 
-		long getFileSize() const {
-			return _content.size();
-		}
+        long getFileSize() const {
+            return _content.size();
+        }
 
-		const string& getMetadata(const string& field) {
-			if (_metadata.count(field)) return _metadata[field];
-		}
+        bool hasField(const string& field) {
+            return _metadata.find(lower(field)) != _metadata.end();
+        }
 
-		void setMetadata(const string& field, const string& value) {
-			_metadata[field] = value;
-		}
+        /**
+         * pre: hasField(field)
+         */
+        const string& getMetadata(const string& field) {
+            return _metadata[lower(field)];
+        }
 
-	private:
+        void setMetadata(const string& field, const string& value) {
+            _metadata[lower(field)] = value;
+        }
+        
+        const map<string, string>::iterator metadataBegin() {
+            return _metadata.begin();
+        }
+
+        const map<string, string>::iterator metadataEnd() {
+            return _metadata.end();
+        }
+        
+        void clear() {
+            _content.clear();
+            _metadata.clear();
+        }
+
+    private:
         UnparsedFile(const UnparsedFile&);
         void operator=(const UnparsedFile&);
-
-		vector<char>  _content;
-		map<string, string> _metadata;
-	};
+        
+        string lower(const string& field) {
+            string tmp = field;
+            boost::algorithm::to_lower(tmp);
+            return tmp;
+        }
+        
+        vector<char> _content;
+        map<string, string> _metadata;
+    };
 
 
 } // namespace indexer

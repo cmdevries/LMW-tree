@@ -1,8 +1,9 @@
 #ifndef COMPRESSED_ARCHIVE_READER_H
 #define COMPRESSED_ARCHIVE_READER_H
 
-#include "lmw/StdIncludes.h"
-#include "lmw/UnparsedFile.h"
+#include "UnparsedFile.h"
+
+#include <fstream>
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
@@ -12,53 +13,58 @@
 
 namespace indexer {
 
-	using boost::iostreams::filtering_istream;
-	using boost::iostreams::gzip_decompressor;
-	using boost::iostreams::bzip2_decompressor;
+    using std::ifstream;
+    
+    using boost::iostreams::filtering_istream;
+    using boost::iostreams::gzip_decompressor;
+    using boost::iostreams::bzip2_decompressor;
 
-	//-----------------------------------------------------------
-	// Abstract Class for reading compressed archive files.
-	// 
-	// Derived classes should override the nextFile() method.
-	//-----------------------------------------------------------
-	class CompressedArchiveReader {
-	public:
+    //-----------------------------------------------------------
+    // Abstract Class for reading compressed archive files.
+    // 
+    // Derived classes should override the nextFile() method.
+    //-----------------------------------------------------------
 
-		CompressedArchiveReader() {			
-		}
+    class CompressedArchiveReader {
+    public:
 
-		CompressedArchiveReader(string fileName, string compressionType) : 
-			_fileName(fileName),
-			_compressionType(compressionType)			
-		{
-			fin.open(_fileName, std::ios_base::in | std::ios_base::binary);
-			if (_compressionType == "gz" || _compressionType == "tgz") {
-				in.push(gzip_decompressor());
-			}
-			else if (_compressionType == "bz2" || _compressionType == "bzip2") {
-				in.push(bzip2_decompressor());
-			}
-			in.push(fin);
-		}
+        CompressedArchiveReader() {
+        }
 
-		~CompressedArchiveReader() {
-			// Cleanup
-			fin.close();
-		}	
+        CompressedArchiveReader(string fileName, string compressionType) :
+        _fileName(fileName),
+        _compressionType(compressionType) {
+            fin.open(_fileName, std::ios_base::in | std::ios_base::binary);
+            _buffer.resize(_bufferSize);
+            fin.rdbuf()->pubsetbuf(&_buffer[0], _bufferSize);
+            if (_compressionType == "gz" || _compressionType == "tgz") {
+                in.push(gzip_decompressor());
+            } else if (_compressionType == "bz2" || _compressionType == "bzip2") {
+                in.push(bzip2_decompressor());
+            }
+            in.push(fin);
+        }
 
-		// Pure virtual method to be overriden
-		virtual UnparsedFile* nextFile() = 0;
+        ~CompressedArchiveReader() {
+            // Cleanup
+            fin.close();
+        }
 
-	protected:
+        // Pure virtual method to be overriden
+        virtual UnparsedFile* nextFile() = 0;
 
-		string _compressionType;
-		string _fileName;
-		UnparsedFile _file;
+    protected:
 
-		ifstream fin;
-		filtering_istream in;
+        string _compressionType;
+        string _fileName;
+        UnparsedFile _file;
+        vector<char> _buffer;
+        int _bufferSize = 1024 * 1024;
 
-	};
+        ifstream fin;
+        filtering_istream in;
+
+    };
 
 } // namespace indexer
 
