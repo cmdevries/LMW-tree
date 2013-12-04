@@ -16,33 +16,37 @@ int main(int argc, char** argv) {
             if (!file) {
                 break;
             }
-            vector<char>& content = file->getContent();
-            for (auto it = content.begin(); it != content.end(); ++it) {
-                if (*it == '\0' || *it == '\n' || *it == '\r') {
-                    *it = ' ';
-                } else {
-                    *it = tolower(*it);
+            if (file->hasField("warc-trec-id")) {
+                vector<char>& content = file->getContent();
+                for (auto it = content.begin(); it != content.end(); ++it) {
+                    if (*it == '\0' || *it == '\n' || *it == '\r') {
+                        *it = ' ';
+                    } else {
+                        *it = tolower(*it);
+                    }
                 }
-            }
-            content[content.size() - 1] = '\0';
-            const char beginTag[] = "<title>";
-            char* begin = strstr(&content[0], beginTag);
-            const char endTag[] = "<";
-            char* end = NULL;
-            if (begin) {
-                end = strstr(begin + strlen(beginTag), endTag);
-            }
-            string title;
-            if (begin && end) {
-                begin += strlen(beginTag);
-                while (begin != end) {
-                    title += *begin;
-                    begin++;
+                content[content.size() - 1] = '\0';
+                const char beginTag[] = "<title>";
+                char* begin = strstr(&content[0], beginTag);
+                const char endTag[] = "<";
+                char* end = NULL;
+                if (begin) {
+                    end = strstr(begin + strlen(beginTag), endTag);
                 }
-            }
-            boost::algorithm::trim(title);
+                string title;
+                if (begin && end) {
+                    begin += strlen(beginTag);
+                    while (begin != end) {
+                        if (isalnum(*begin) || *begin == ' ') {
+                            title += *begin;
+                        }
+                        begin++;
+                    }
+                }
+                boost::algorithm::trim(title);
 
-            cout << file->getMetadata("WaRC-tReC-iD") << endl << title << endl;
+                cout << file->getMetadata("WaRC-tReC-iD") << endl << title << endl;
+            }
         }
     }
 

@@ -2,7 +2,7 @@
 #define UNPARSED_FILE_H
 
 #include <istream>
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -11,7 +11,7 @@
 namespace indexer {
 
     using std::istream;
-    using std::map;
+    using std::unordered_map;
     using std::string;
     using std::vector;
 
@@ -55,11 +55,11 @@ namespace indexer {
             _metadata[lower(field)] = value;
         }
         
-        const map<string, string>::iterator metadataBegin() {
+        const unordered_map<string, string>::iterator metadataBegin() {
             return _metadata.begin();
         }
 
-        const map<string, string>::iterator metadataEnd() {
+        const unordered_map<string, string>::iterator metadataEnd() {
             return _metadata.end();
         }
         
@@ -79,7 +79,7 @@ namespace indexer {
         }
         
         vector<char> _content;
-        map<string, string> _metadata;
+        unordered_map<string, string> _metadata;
     };
 
 
