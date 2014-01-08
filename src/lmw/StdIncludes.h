@@ -26,6 +26,8 @@
 #include <boost/timer/timer.hpp>
 #include <boost/program_options.hpp>
 #include <boost/dynamic_bitset.hpp>
+#include <boost/format.hpp>
+
 
 #include "Utils.h"
 
@@ -51,6 +53,8 @@ using std::runtime_error;
 using std::hex;
 using std::dec;
 using std::ends;
+
+using boost::format;
 
 typedef boost::mt19937 RND_ENG;
 

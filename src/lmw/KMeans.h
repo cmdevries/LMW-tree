@@ -135,11 +135,20 @@ private:
         // Repeat until convergence.
         _converged = false;
         _iterCount = 1;
+		
+		// For testing
+		std::cout << endl << "Iteration: " << _iterCount << "\t" << getRMSE();
+
         while (!_converged) {
             vectorsToNearestCentroid(data);
             recalculateCentroids(data);
             _iterCount++;
+
+			// For testing
+			std::cout << endl << "Iteration: " << _iterCount << "\t" << getRMSE();
+			
             if (_maxIters != -1 && _iterCount >= _maxIters) {
+
                 break;
             }
         }
@@ -186,6 +195,8 @@ private:
             size_t nearest = _nearestCentroid[i];
             _clusters[nearest]->addNearest(data[i]);
         }
+
+
     }
 
     /**
