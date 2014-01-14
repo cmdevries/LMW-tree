@@ -145,7 +145,7 @@ private:
             _iterCount++;
 
 			// For testing
-			std::cout << endl << "Iteration: " << _iterCount << "\t" << getRMSE();
+			// std::cout << endl << "Iteration: " << _iterCount << "\t" << getRMSE();
 			
             if (_maxIters != -1 && _iterCount >= _maxIters) {
 
