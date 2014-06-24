@@ -9,7 +9,7 @@
 
 int main(int argc, char** argv) {
     std::srand(std::time(0));
-    
+
     if (true) {
         streamingEMTree();
     } else if (false) {
@@ -44,13 +44,13 @@ int main(int argc, char** argv) {
         } else {
             cout << "error - vectors or subset empty" << endl;
         }
-        
+
         for (auto v : vectors) {
             delete v;
         }
     }
-    
+
     return EXIT_SUCCESS;
 }
 
-  
+
