@@ -20,4 +20,4 @@ clustering, random projections, random indexing, hashing, bit signatures.
 
 LMW-tree is licensed under the BSD license.
 
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/924ebc6da96590c794151e4aadeb009b "githalytics.com")](http://githalytics.com/cmdevries/LMW-tree)
+See http://ktree.sourceforge.net/emtree/clueweb09/ and http://ktree.sourceforge.net/emtree/clueweb12/ for examples of clusters produced by the EM-tree algorithm. The ClueWeb09 dataset contains 500 million documents and was clustered into 700,000 clusters. The ClueWeb12 datasets contains 733 million documents and was clustered into 600,000 clusters. The document to cluster mappings and other related files area available at http://sourceforge.net/projects/ktree/files/clueweb_clusters/.
