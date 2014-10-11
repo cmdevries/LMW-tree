@@ -18,7 +18,7 @@ for nearest neighbor search, supervised learning and other machine learning
 applications.
 
 The package includes EM-tree, K-tree, k-means, TSVQ, repeated k-means,
-clustering, random projections, random indexing, hashing, bit signatures. See the related [PhD thesis](http://eprints.qut.edu.au/75862/) for more details.
+clustering, random projections, random indexing, hashing, bit signatures. See the related [PhD thesis](http://eprints.qut.edu.au/75862/) for more details these algorithms and representations.
 
 LMW-tree is licensed under the BSD license.
 
