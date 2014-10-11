@@ -5,7 +5,7 @@ See the [K-tree project homepage](http://ktree.sf.net) for the latest news!
 
 LMW-tree is a generic template library written in C++ that implements several
 algorithms that use the m-way nearest neighbor tree structre to store their
-data. The algorithms and data structures are generic to support different
+data. See the related [PhD thesis](http://eprints.qut.edu.au/75862/) for more details on m-way nn trees. The algorithms and data structures are generic to support different
 data representations such as dense real valued and bit vectors, and sparse
 vectors. Additionally, it can index any object type that can form a prototype
 representation of a set of objects.
@@ -18,7 +18,7 @@ for nearest neighbor search, supervised learning and other machine learning
 applications.
 
 The package includes EM-tree, K-tree, k-means, TSVQ, repeated k-means,
-clustering, random projections, random indexing, hashing, bit signatures.
+clustering, random projections, random indexing, hashing, bit signatures. See the related [PhD thesis](http://eprints.qut.edu.au/75862/) for more details.
 
 LMW-tree is licensed under the BSD license.
 
