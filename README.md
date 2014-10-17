@@ -23,3 +23,7 @@ clustering, random projections, random indexing, hashing, bit signatures. See th
 LMW-tree is licensed under the BSD license.
 
 See the [ClueWeb09 clusters](http://ktree.sourceforge.net/emtree/clueweb09/) and the [ClueWeb12 clusters](http://ktree.sourceforge.net/emtree/clueweb12/) for examples of clusters produced by the EM-tree algorithm. The ClueWeb09 dataset contains 500 million web pages and was clustered into 700,000 clusters. The ClueWeb12 datasets contains 733 million web pages and was clustered into 600,000 clusters. The document to cluster mappings and other related files area available at [SourceForge](http://sourceforge.net/projects/ktree/files/clueweb_clusters/).
+
+The following people have contributed to the project (sorted lexicographically by last name)
+- Lance De Vine
+- Chris de Vries
