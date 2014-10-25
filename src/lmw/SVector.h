@@ -191,6 +191,8 @@ public:
         }
     }
 
+	// Be careful of the semantics of this method.
+	// The block is or'd, not made equal to.
     void setBlock(int i, block_type b) {
         _data[i] |= b;
     }
