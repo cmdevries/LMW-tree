@@ -47,7 +47,7 @@ modules contained in namespaces.
 
 Currently we use:
 - [Boost](http://www.boost.org) 1.57.0
-- [Intel Theading Building Blocks](http://www.threadingbuildingblocks.org) 4.3 Update 1
+- [Intel Theading Building Blocks](http://www.threadingbuildingblocks.org) 4.2 Update 5
 - [strtk](https://code.google.com/p/strtk/)
 
 Directory structure:
