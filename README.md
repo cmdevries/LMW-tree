@@ -63,3 +63,24 @@ Directory structure:
     /external/packages - source packages for external libraries
     /external/build - build directory for external libraries
     /external/install - installation directory for external libraries
+
+Building
+========
+
+Make dependencies using a GNU Makefile (only tested on Linux)
+
+    $ cd external
+    $ make
+    $ cd ..
+
+We use CMake for making the main project
+
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
+
+Run the program
+
+    $ LD_LIBRARY_PATH=../external/install/lib ./emtree
+

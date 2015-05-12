@@ -5,3 +5,4 @@ EMTree.o
 *.csv
 external/install
 external/build
+build/
