@@ -6,3 +6,4 @@ EMTree.o
 external/install
 external/build
 build/
+data/

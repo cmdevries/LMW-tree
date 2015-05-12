@@ -51,6 +51,7 @@ Currently we use:
 - [strtk](https://code.google.com/p/strtk/)
 
 Directory structure:
+
     /
 
     /src - all source contributed by this project where each subdirectory
@@ -64,8 +65,8 @@ Directory structure:
     /external/build - build directory for external libraries
     /external/install - installation directory for external libraries
 
-Building
-========
+Building and Running
+====================
 
 Make dependencies using a GNU Makefile (only tested on Linux)
 
@@ -79,8 +80,17 @@ We use CMake for making the main project
     $ cd build
     $ cmake ..
     $ make
+    $ cd ..
+
+Fetch some data to cluster
+
+    $ mkdir data
+    $ cd data
+    $ wget http://downloads.sourceforge.net/project/ktree/docclust_ir/inex_xml_mining_subset_2010.txt
+    $ wget http://downloads.sourceforge.net/project/ktree/docclust_ir/wikisignatures.tar.gz
+    $ tar xzf wikisignatures.tar.gz
+    $ cd ..
 
 Run the program
 
-    $ LD_LIBRARY_PATH=../external/install/lib ./emtree
-
+    $ LD_LIBRARY_PATH=./external/install/lib ./build/emtree
