@@ -311,7 +311,7 @@ public:
         size_t numBlocks = v1.getNumBlocks();
         block_type *data1 = v1.getData(), *data2 = v2.getData();
 
-#if 0 
+#if 0
         block_type exor;
         for (int i = 0; i < numBlocks; i++) {
             exor = data1[i] ^ data2[i];
@@ -328,14 +328,21 @@ public:
 // into accumulators.
 //
 // 2009 MacBook Pro
-// - Streaming EM-tree is about 10% faster (33 vs 37 seconds per iteration) 
+// - Streaming EM-tree is about 10% faster (33 vs 37 seconds per iteration)
 // - Intel(R) Core(TM)2 Duo CPU     T9600  @ 2.80GHz
 // - 2 x 4GB DDR3 @ 1333 MHz
 // - Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn)
 // - OS X 10.10
+//
+// 2015 MacBook Pro
+// - Streaming EM-tree is about 5% faster (11.5 vs 12 seconds per iteration)
+// - Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+// - 8GB 1866MHz LPDDR3
+// - gcc (Ubuntu 4.9.2-10ubuntu13) 4.9.2
+// - Ubuntu 15.04
 #if 1
         // It is possible numBlocks is not divisible by 8.
-        // For example, 640 bit vectors have 10 * 64-bit chunks. 
+        // For example, 640 bit vectors have 10 * 64-bit chunks.
         // Therefore, there will be 2 remaining chunks when unrolling 8 chunks
         // at a time for 640 bit vectors.
         block_type exor, exor1, exor2, exor3, exor4, exor5, exor6, exor7;
