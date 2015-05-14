@@ -275,7 +275,7 @@ public:
     }
 
     void invert() {
-        for (int i = 0; i < _numBlocks; i++) ~_data[i];
+        for (int i = 0; i < _numBlocks; i++) _data[i] = ~_data[i];
     }
 
     void print() {
@@ -309,17 +309,63 @@ public:
 
         int count = 0;
         size_t numBlocks = v1.getNumBlocks();
-        block_type *data1, *data2;
+        block_type *data1 = v1.getData(), *data2 = v2.getData();
+
+#if 0 
         block_type exor;
-
-        data1 = v1.getData();
-        data2 = v2.getData();
-
-        for (int i = 0; i < numBlocks; ++i) {
+        for (int i = 0; i < numBlocks; i++) {
             exor = data1[i] ^ data2[i];
             count += popcnt64(exor);
         }
         return count;
+#endif
+
+// The loop unrolled version is faster on the following systems.  Measured on
+// Streaming EM-tree in streamingEMTree() on 2.6 million 4096 bit Wikipedia
+// signatures (the ones from the README.md). Improvements to Hamming distance
+// are double reported for Streaming EM-tree because only half the time in the
+// algorithm is spend on Hamming distance. The other half is unpacking vectors
+// into accumulators.
+//
+// 2009 MacBook Pro
+// - Streaming EM-tree is about 10% faster (33 vs 37 seconds per iteration) 
+// - Intel(R) Core(TM)2 Duo CPU     T9600  @ 2.80GHz
+// - 2 x 4GB DDR3 @ 1333 MHz
+// - Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn)
+// - OS X 10.10
+#if 1
+        // It is possible numBlocks is not divisible by 8.
+        // For example, 640 bit vectors have 10 * 64-bit chunks. 
+        // Therefore, there will be 2 remaining chunks when unrolling 8 chunks
+        // at a time for 640 bit vectors.
+        block_type exor, exor1, exor2, exor3, exor4, exor5, exor6, exor7;
+        size_t remainder = numBlocks % 8;
+        size_t end8Chunks = numBlocks - remainder;
+        int i = 0;
+        for ( ; i < end8Chunks; i += 8) {
+            exor = data1[i] ^ data2[i];
+            count += popcnt64(exor);
+            exor1 = data1[i+1] ^ data2[i+1];
+            count += popcnt64(exor1);
+            exor2 = data1[i+2] ^ data2[i+2];
+            count += popcnt64(exor2);
+            exor3 = data1[i+3] ^ data2[i+3];
+            count += popcnt64(exor3);
+            exor4 = data1[i+4] ^ data2[i+4];
+            count += popcnt64(exor4);
+            exor5 = data1[i+5] ^ data2[i+5];
+            count += popcnt64(exor5);
+            exor6 = data1[i+6] ^ data2[i+6];
+            count += popcnt64(exor6);
+            exor7 = data1[i+7] ^ data2[i+7];
+            count += popcnt64(exor7);
+        }
+        for ( ; i < numBlocks; i++) {
+            exor = data1[i] ^ data2[i];
+            count += popcnt64(exor);
+        }
+        return count;
+#endif
     }
 
 };

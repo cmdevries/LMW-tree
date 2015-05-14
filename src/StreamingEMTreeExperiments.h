@@ -116,7 +116,7 @@ void streamingEMTree() {
     // initialize TBB
     const bool parallel = true;
     if (parallel) {
-        tbb::task_scheduler_init init_parallel();
+        tbb::task_scheduler_init init_parallel;
     } else {
         tbb::task_scheduler_init init_serial(1);
     }
