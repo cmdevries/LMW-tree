@@ -178,7 +178,7 @@ void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
         
         // update tree according to mini batch
         update.start();
-        emtree->update();
+        emtree->updateMiniBatch();
         update.stop();
         update.report();
 
