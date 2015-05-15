@@ -131,6 +131,7 @@ void streamingEMTree() {
         {
             boost::timer::auto_cpu_timer update("update streaming EM-tree: %w seconds\n");
             emtree->update();
+            emtree->clearAccumulators();
         }
         cout << "-----" << endl << endl;
     }
@@ -142,9 +143,6 @@ void streamingEMTree() {
 void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
     // open files
     SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
-
-    // clear any previous accumulator state from previous iterations
-    emtree->clearAccumulators();
 
     // insert from stream
     size_t batchCount = 0;
@@ -178,13 +176,16 @@ void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
 
         // update tree according to mini batch
         update.start();
-        emtree->updateMiniBatch();
+        emtree->update();
         update.stop();
         update.report();
 
         batchCount++;
         std::cout << "------------" << std::endl;
     }
+
+    // clear accumulators for next iteration
+    emtree->clearAccumulators();
 }
 
 void streamingMiniBatchEMTree() {
@@ -206,7 +207,6 @@ void streamingMiniBatchEMTree() {
     }
 
     // last iteration writes cluster assignments and does not update accumulators
-    emtree->clearAccumulators();
     insertWriteClusters(emtree);
 }
 #endif	/* STREAMINGEMTREEEXPERIMENTS_H */

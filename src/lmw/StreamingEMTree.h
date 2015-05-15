@@ -14,22 +14,22 @@ namespace lmw {
  * The streaming version of the EM-tree algorithm does not store the
  * data vectors in the tree. Therefore, the leaf level in the tree contain
  * cluster representatives.
- * 
+ *
  * It has accumulator vectors for centroids at the leaf level. The accumulators
  * are used to calculate a mean in the streaming setting. Note that accumulators
  * are only needed in the leaf level as means at all higher levels in the tree
  * can be calculated from the leaves.
- * 
+ *
  * T is the type of vector stored in the node.
- * 
+ *
  * ACCUMULATOR is the the type used for the accumulator vectors. For example,
  * with bit vectors, integer accumulators are used.
- * 
+ *
  * ACCUMULATORs must support being constructed with the number of dimensions,
  * auto a = ACCUMULATOR(dimensions);
  * They must also support the add operation at a given dimension,
  * a[i] += 1;
- * 
+ *
  * OPTIMIZER provides the functions necessary for optimization.
  */
 template <typename T, typename ACCUMULATOR, typename OPTIMIZER>
@@ -40,7 +40,7 @@ public:
             _root->setOwnsKeys(true);
             deepCopy(root, _root);
     }
-        
+
     ~StreamingEMTree() {
         delete _root;
     }
@@ -71,14 +71,14 @@ public:
 
     void visit(ClusterVisitor<T>& visitor) {
         visit(NULL, _root, visitor);
-    }    
-    
+    }
+
     void visit(vector<T*>& data, InsertVisitor<T>& visitor) {
         for (T* object : data) {
             visit(_root, object, visitor);
         }
     }
-    
+
     size_t insert(SVectorStream<T>& vs) {
         return insert(vs, -1);
     }
@@ -109,7 +109,7 @@ public:
 
         return totalRead;
     }
-    
+
     /**
      * Insert is thread safe. Shared accumulators are locked.
      */
@@ -118,41 +118,31 @@ public:
             insert(_root, object);
         }
     }
-    
+
     int prune() {
         return prune(_root);
     }
-    
+
     void update() {
-        update(_root);
-        clearAccumulators(_root);
-    }
-    
-    /**
-     * Do a mini batch stochastic gradient descent update step.
-     * This is used with insert(stream, maxToRead) where maxToRead is the
-     * mini batch size.
-     */
-    void updateMiniBatch() {
         update(_root);
     }
 
     void clearAccumulators() {
         clearAccumulators(_root);
-    }    
+    }
 
     int getMaxLevelCount() {
         return maxLevelCount(_root);
     }
-    
+
     int getClusterCount(int depth) {
         return clusterCount(_root, depth);
     }
-    
+
     uint64_t getObjCount() {
         return objCount(_root);
     }
-    
+
     double getRMSE() {
         double RMSE = sumSquaredError(_root);
         uint64_t size = getObjCount();
@@ -163,11 +153,11 @@ public:
 
 private:
     typedef tbb::mutex Mutex;
-    
+
     struct AccumulatorKey {
         AccumulatorKey() : key(NULL), sumSquaredError(0), accumulator(NULL),
                 count(0),  mutex(NULL) { }
-        
+
         ~AccumulatorKey() {
             if (key) {
                 delete key;
@@ -179,20 +169,20 @@ private:
                 delete mutex;
             }
         }
-                
+
         T* key;
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
         uint64_t count; // how many vectors have been added to accumulator
         Mutex* mutex;
     };
-    
+
     struct Accessor {
         T* operator()(AccumulatorKey* accumulatorKey) {
             return accumulatorKey->key;
         }
     };
-       
+
     void visit(T* parentKey, Node<AccumulatorKey>* node, ClusterVisitor<T>& visitor, int level = 1) {
         for (size_t i = 0; i < node->size(); i++) {
             auto accumulatorKey = node->getKey(i);
@@ -205,11 +195,11 @@ private:
             }
         }
     }
-    
+
     Nearest<AccumulatorKey> nearestKey(T* object, Node<AccumulatorKey>* node) {
         return _optimizer.nearest(object, node->getKeys(), _accessor);
     }
-    
+
     void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
         auto nearest = nearestKey(object, node);
         auto accumulatorKey = nearest.key;
@@ -223,8 +213,8 @@ private:
         } else {
             visit(node->getChild(nearest.index), object, visitor, level + 1);
         }
-    }    
-    
+    }
+
     void insert(Node<AccumulatorKey>* node, T* object) {
         auto nearest = nearestKey(object, node);
         if (node->isLeaf()) {
@@ -256,7 +246,7 @@ private:
         node->finalizeRemovals();
         return pruned;
     }
-    
+
     void gatherAccumulators(Node<AccumulatorKey>* node, ACCUMULATOR* total,
             uint64_t* totalCount) {
         if (node->isLeaf()) {
@@ -273,7 +263,7 @@ private:
             }
         }
     }
-    
+
     /**
      * TODO(cdevries): Make it work for something other than bitvectors. It needs
      * to be parameterized, for example, with float vectors, a mean is taken.
@@ -281,7 +271,7 @@ private:
     static void updatePrototypeFromAccumulator(T* key, ACCUMULATOR* accumulator,
             uint64_t count) {
         if (count == 0) return;
-        
+
         // calculate new key based on accumulator
         key->setAllBlocks(0);
         for (size_t i = 0; i < key->size(); i++) {
@@ -290,12 +280,12 @@ private:
             }
         }
     }
-    
+
     void update(Node<AccumulatorKey>* node) {
         if (node->isLeaf()) {
             // leaves flatten accumulators in node
             for (auto accumulatorKey : node->getKeys()) {
-                updatePrototypeFromAccumulator(accumulatorKey->key, 
+                updatePrototypeFromAccumulator(accumulatorKey->key,
                         accumulatorKey->accumulator, accumulatorKey->count);
             }
         } else {
@@ -327,10 +317,10 @@ private:
         } else {
             for (auto child : node->getChildren()) {
                 clearAccumulators(child);
-            }            
+            }
         }
     }
-    
+
     void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
             size_t dimensions = src->getKey(0)->size();
@@ -363,7 +353,7 @@ private:
             if (maxToRead > 0 && totalRead >= maxToRead) {
                 fc.stop();
                 return NULL;
-            }    
+            }
             auto data = new vector<T*>;
             size_t read = vs.read(_readsize, data);
             if (read == 0) {
@@ -375,7 +365,7 @@ private:
             return data;
         });
     }
-    
+
     double sumSquaredError(Node<AccumulatorKey>* node, size_t i) {
         if (node->isLeaf()) {
             return node->getKey(i)->sumSquaredError;
@@ -383,7 +373,7 @@ private:
             return sumSquaredError(node->getChild(i));
         }
     }
-    
+
     double sumSquaredError(Node<AccumulatorKey>* node) {
         if (node->isLeaf()) {
             double localSum = 0;
@@ -397,9 +387,9 @@ private:
                 localSum += sumSquaredError(child);
             }
             return localSum;
-        }        
+        }
     }
-    
+
     /**
      * Object count for cluster i in node.
      */
@@ -410,7 +400,7 @@ private:
             return objCount(node->getChild(i));
         }
     }
-    
+
     uint64_t objCount(Node<AccumulatorKey>* node) {
         if (node->isLeaf()) {
             uint64_t localCount = 0;
@@ -425,7 +415,7 @@ private:
             }
             return localCount;
         }
-    }    
+    }
 
     int maxLevelCount(Node<AccumulatorKey>* current) {
         if (current->isLeaf()) {
@@ -438,7 +428,7 @@ private:
             return maxCount + 1;
         }
     }
-    
+
     int clusterCount(Node<AccumulatorKey>* current, int depth) {
         if (depth == 1) {
             return current->size();
@@ -449,19 +439,19 @@ private:
             }
             return localCount;
         }
-    }    
+    }
 
     Node<AccumulatorKey>* _root;
     OPTIMIZER _optimizer;
     Accessor _accessor;
-    
+
     // How mamny vectors to read at once when processing a stream.
     int _readsize = 1000;
-    
+
     // The maximum number of readsize vector chunks that can be loaded at once.
     int _maxtokens = 1024;
 };
- 
+
 } // namespace lmw
 
 #endif	/* STREAMINGEMTREE_H */
