@@ -156,7 +156,7 @@ void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
     size_t totalRead = 0;
     for (;;) {
         std::cout << "BATCH " << batchCount << std::endl;
-        
+
         // insert mini batch
         boost::timer::auto_cpu_timer insert("inserting batch into streaming EM-tree: %w seconds\n");
         insert.start();
@@ -164,18 +164,18 @@ void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
         if (read == 0) {
             cout << "REACHED END OF STREAM" << std::endl;
             break;
-        }    
+        }
         totalRead += read;
         insert.stop();
         cout << read << " vectors streamed from disk" << endl;
         cout << totalRead << " vectors streamed so far disk" << endl;
         insert.report();
-        
+
         // report tree stats
         report(emtree);
 
         boost::timer::auto_cpu_timer update("update streaming EM-tree: %w seconds\n");
-        
+
         // update tree according to mini batch
         update.start();
         emtree->updateMiniBatch();
@@ -184,7 +184,7 @@ void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
 
         batchCount++;
         std::cout << "------------" << std::endl;
-    }    
+    }
 }
 
 void streamingMiniBatchEMTree() {
@@ -203,9 +203,10 @@ void streamingMiniBatchEMTree() {
     for (int i = 0; i < maxIters - 1; i++) {
         cout << "ITERATION " << i << endl;
         streamingMiniBatchEMTreeInsertUpdateReport(emtree);
-    }    
+    }
 
     // last iteration writes cluster assignments and does not update accumulators
+    emtree->clearAccumulators();
     insertWriteClusters(emtree);
 }
 #endif	/* STREAMINGEMTREEEXPERIMENTS_H */
