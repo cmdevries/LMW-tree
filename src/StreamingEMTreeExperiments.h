@@ -139,5 +139,74 @@ void streamingEMTree() {
     insertWriteClusters(emtree);
 }
 
+void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
+    // open files
+    SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
+
+    // clear any previous accumulator state from previous iterations
+    emtree->clearAccumulators();
+
+    // insert from stream
+    size_t batchCount = 0;
+    const size_t batchSize = 100000;
+    std::cout << "INITIAL STATE" << std::endl;
+    report(emtree);
+    std::cout << "------------" << std::endl;
+    std::cout << "batch size = " << batchSize << " signatures" << std::endl;
+    size_t totalRead = 0;
+    for (;;) {
+        std::cout << "BATCH " << batchCount << std::endl;
+        
+        // insert mini batch
+        boost::timer::auto_cpu_timer insert("inserting batch into streaming EM-tree: %w seconds\n");
+        insert.start();
+        size_t read = emtree->insert(vs, batchSize);
+        if (read == 0) {
+            cout << "REACHED END OF STREAM" << std::endl;
+            break;
+        }    
+        totalRead += read;
+        insert.stop();
+        cout << read << " vectors streamed from disk" << endl;
+        cout << totalRead << " vectors streamed so far disk" << endl;
+        insert.report();
+        
+        // report tree stats
+        report(emtree);
+
+        boost::timer::auto_cpu_timer update("update streaming EM-tree: %w seconds\n");
+        
+        // update tree according to mini batch
+        update.start();
+        emtree->update();
+        update.stop();
+        update.report();
+
+        batchCount++;
+        std::cout << "------------" << std::endl;
+    }    
+}
+
+void streamingMiniBatchEMTree() {
+    // initialize TBB
+    const bool parallel = true;
+    if (parallel) {
+        tbb::task_scheduler_init init_parallel;
+    } else {
+        tbb::task_scheduler_init init_serial(1);
+    }
+
+    // streaming EMTree
+    StreamingEMTree_t* emtree = streamingEMTreeInit();
+    cout << endl << "Streaming EM-tree:" << endl;
+    const int maxIters = 2;
+    for (int i = 0; i < maxIters - 1; i++) {
+        cout << "ITERATION " << i << endl;
+        streamingMiniBatchEMTreeInsertUpdateReport(emtree);
+    }    
+
+    // last iteration writes cluster assignments and does not update accumulators
+    insertWriteClusters(emtree);
+}
 #endif	/* STREAMINGEMTREEEXPERIMENTS_H */
 

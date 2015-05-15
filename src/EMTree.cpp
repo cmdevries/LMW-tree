@@ -10,7 +10,9 @@
 int main(int argc, char** argv) {
     std::srand(std::time(0));
 
-    if (true) {
+    if (false) {
+        streamingMiniBatchEMTree();
+    } else if (true) {
         streamingEMTree();
     } else if (false) {
         clueweb();

@@ -80,6 +80,13 @@ public:
     }
     
     size_t insert(SVectorStream<T>& vs) {
+        return insert(vs, -1);
+    }
+
+    /** Returns the total number of vectors read from the stream.
+     *  Returns 0 if the end of the stream has been reached.
+     */
+    size_t insert(SVectorStream<T>& vs, const size_t maxToRead) {
         size_t totalRead = 0;
 
         // setup parallel processing pipeline
@@ -87,7 +94,7 @@ public:
                 // Input filter reads readsize chunks of vectors in serial
                 tbb::make_filter<void, vector < SVector<bool>*>*>(
                 tbb::filter::serial_out_of_order,
-                inputFilter(vs, totalRead)
+                inputFilter(vs, totalRead, maxToRead)
                 ) &
                 // Insert filter inserts readsize chunks of vectors into streaming EM-tree in parallel
                 tbb::make_filter < vector < SVector<bool>*>*, void>(
@@ -121,6 +128,19 @@ public:
         clearAccumulators(_root);
     }
     
+    /**
+     * Do a mini batch stochastic gradient descent update step.
+     * This is used with insert(stream, maxToRead) where maxToRead is the
+     * mini batch size.
+     */
+    void updateMiniBatch() {
+        update(_root);
+    }
+
+    void clearAccumulators() {
+        clearAccumulators(_root);
+    }    
+
     int getMaxLevelCount() {
         return maxLevelCount(_root);
     }
@@ -146,7 +166,7 @@ private:
     
     struct AccumulatorKey {
         AccumulatorKey() : key(NULL), sumSquaredError(0), accumulator(NULL),
-                count(0), mutex(NULL) { }
+                count(0),  mutex(NULL) { }
         
         ~AccumulatorKey() {
             if (key) {
@@ -260,6 +280,8 @@ private:
      */
     static void updatePrototypeFromAccumulator(T* key, ACCUMULATOR* accumulator,
             uint64_t count) {
+        if (count == 0) return;
+        
         // calculate new key based on accumulator
         key->setAllBlocks(0);
         for (size_t i = 0; i < key->size(); i++) {
@@ -308,7 +330,7 @@ private:
             }            
         }
     }
-       
+    
     void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
             size_t dimensions = src->getKey(0)->size();
@@ -335,8 +357,13 @@ private:
     }
 
     std::function<vector<SVector<bool>*>*(tbb::flow_control&)> inputFilter(
-            SVectorStream<T>& vs, size_t& totalRead) {
-        return ([&] (tbb::flow_control & fc) -> vector < SVector<bool>*>* {
+            SVectorStream<T>& vs, size_t& totalRead, const size_t maxToRead = -1) {
+        return ([&vs, &totalRead, this, maxToRead]
+                (tbb::flow_control & fc) -> vector < SVector<bool>*>* {
+            if (maxToRead > 0 && totalRead >= maxToRead) {
+                fc.stop();
+                return NULL;
+            }    
             auto data = new vector<T*>;
             size_t read = vs.read(_readsize, data);
             if (read == 0) {
