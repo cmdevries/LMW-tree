@@ -328,7 +328,7 @@ private:
                 auto key = src->getKey(i);
                 auto child = src->getChild(i);
                 auto accumulatorKey = new AccumulatorKey();
-                accumulatorKey->key = new T(key);
+                accumulatorKey->key = new T(*key);
                 if (child->isLeaf()) {
                     // Do not copy leaves of original tree and setup
                     // accumulators for the lowest level cluster means.

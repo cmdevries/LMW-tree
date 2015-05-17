@@ -29,11 +29,11 @@
 namespace lmw {
 
 struct hammingDistance {
-    double operator()(SVector<bool> *v1, SVector<bool> *v2) const {
+    double operator()(const SVector<bool> *v1, const SVector<bool> *v2) const {
         return SVector<bool>::hammingDistance(*v1, *v2);
     }
     
-    double squared(SVector<bool> *v1, SVector<bool> *v2) const {
+    double squared(const SVector<bool> *v1, const SVector<bool> *v2) const {
         double distance = operator()(v1, v2);
         return distance * distance;
     }    
@@ -41,9 +41,9 @@ struct hammingDistance {
 
 template <typename T>
 struct euclideanDistanceSq {    
-    double operator()(T *t1, T *t2) const {
-        typename T::iterator it1 = t1->begin();
-        typename T::iterator it2 = t2->begin();
+    double operator()(const T *t1, const T *t2) const {
+        typename T::const_iterator it1 = t1->begin();
+        typename T::const_iterator it2 = t2->begin();
         double d, sum = 0.0f;
         for (it1 = t1->begin(), it2 = t2->begin(); it1 != t1->end(), it2 != t2->end(); it1++, it2++) {
             d = *it1 - *it2;
@@ -52,15 +52,14 @@ struct euclideanDistanceSq {
         return sum;
     }
     
-    double squared(T *t1, T *t2) const {
+    double squared(const T *t1, const T *t2) const {
         return operator()(t1, t2);
     }    
 };
 
 template <typename T>
 struct euclideanDistance {
-    double operator()(T *t1, T *t2) const {
-        euclideanDistanceSq<T> squared;
+    double operator()(const T *t1, const T *t2) const {
         return sqrt(_squared(t1, t2));
     }
     

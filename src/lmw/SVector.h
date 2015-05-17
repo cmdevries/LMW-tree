@@ -15,20 +15,13 @@ typedef uint64_t block_type;
 
 template <class T>
 class SVector {
-protected:
-
-    T* _data;
-    size_t _length;
-	string _id;
-
 public:
-
-    SVector(size_t length) {
+    SVector(const size_t length) {
         _length = length;
         _data = new T[_length];
     }
 
-    SVector(SVector<T> &other) {
+    SVector(const SVector<T>& other) {
         _length = other._length;
         _data = new T[_length];
         for (size_t i = 0; i < _length; i++) {
@@ -46,16 +39,32 @@ public:
     iterator begin() {
         return &_data[0];
     }
+    
+    const_iterator begin() const {
+        return begin();
+    }
 
     iterator end() {
         return &_data[_length];
     }
 
+    const_iterator end() const {
+        return end();
+    }    
+
     T& operator[](size_t i) {
         return at(i);
     }
 
+    T operator[](size_t i) const {
+        return at(i);
+    }
+
     T& at(size_t i) {
+        return _data[i];
+    }
+    
+    T at(size_t i) const {
         return _data[i];
     }
 
@@ -67,79 +76,70 @@ public:
 		return _id;
 	}
 
-    void set(size_t i, T val) {
+    void set(const size_t i, const T& val) {
         _data[i] = val;
     }
 
-    void setAll(T a) {
+    void setAll(const T& a) {
         // Maybe use memset here instead
         for (size_t i = 0; i < _length; i++) {
             _data[i] = a;
         }
     }
 
-    void add(SVector &other) {
-
+    void add(const SVector& other) {
         for (size_t i = 0; i < _length; i++) {
             _data[i] = _data[i] + other._data[i];
         }
     }
 
-    void addMult(SVector &other, float coef) {
-
+    void addMult(const SVector& other, const float coef) {
         for (size_t i = 0; i < _length; i++) {
             _data[i] = _data[i] + other._data[i] * coef;
         }
     }
 
-    void scale(T val) {
-
+    void scale(const T& val) {
         for (size_t i = 0; i < _length; i++) {
             _data[i] = _data[i] * val;
         }
     }
 
-    size_t size() {
+    size_t size() const {
         return _length;
     }
 
-    void print() {
+    void print() const {
         for (size_t i = 0; i < _length; i++) {
             std::cout << _data[i] << " ";
         }
     }
 
+protected:
+    T* _data;
+    size_t _length;
+	string _id;
 };
 
-// Template specialization for bit vector
-
+/// Template specialization for bit vector
 template <>
 class SVector <bool> {
-protected:
-
-    block_type* _data;
-
-    int _numBlocks;
-    size_t _length;
-    string _id;
-
 public:
-
-    SVector(size_t length) {
+    SVector(const size_t length) {
         _length = length;
         _numBlocks = _length >> BITS_WS;
         _data = new block_type[_numBlocks];
     }
 
-    SVector(char *bytes, size_t length) {
+    SVector(void* bytes, const size_t length) {
         size_t numBytes = length / 8;
         _length = length;
         _numBlocks = _length >> BITS_WS;
         _data = new block_type[_numBlocks];
-        memcpy(_data, bytes, numBytes);
+        memcpy(reinterpret_cast<uint8_t*>(_data), bytes, numBytes);
     }
 
-    SVector(SVector<bool> &vec) {
+    SVector(const SVector<bool>& vec) {
         _length = vec._length;
         _numBlocks = vec._numBlocks;
         _data = new block_type[_numBlocks];
@@ -147,17 +147,6 @@ public:
         // initialise bit vector
         for (int i = 0; i < _numBlocks; i++) {
             setBlock(i, vec._data[i]);
-        }
-    }
-
-    SVector(SVector<bool> *vec) {
-        _length = vec->_length;
-        _numBlocks = vec->_numBlocks;
-        _data = new block_type[_numBlocks];
-
-        // initialise bit vector
-        for (int i = 0; i < _numBlocks; i++) {
-            setBlock(i, vec->_data[i]);
         }
     }
 
@@ -173,15 +162,19 @@ public:
         return _id;
     }
 
-    size_t size() {
+    size_t size() const {
         return _length;
     }
 
-    size_t getNumBlocks() {
+    size_t getNumBlocks() const {
         return _numBlocks;
     }
 
     block_type* getData() {
+        return _data;
+    }
+
+    const block_type* getData() const {
         return _data;
     }
 
@@ -193,36 +186,35 @@ public:
 
 	// Be careful of the semantics of this method.
 	// The block is or'd, not made equal to.
-    void setBlock(int i, block_type b) {
+    void setBlock(const int i, const block_type b) {
         _data[i] |= b;
     }
 
-    void set(int i) {
+    void set(const int i) {
         _data[i >> BITS_WS] |= (1LL << (i & MASK));
     }
 
-    int isSet(int i) {
+    int isSet(const int i) const {
         return ((_data[i >> BITS_WS] & (1LL << (i & MASK))) != 0);
     }
 
-    int operator[](int i) {
+    int operator[](const int i) const {
         return at(i);
     }
 
-    int at(int i) {
+    int at(int i) const {
         return ((_data[i >> BITS_WS] & (1LL << (i & MASK))) != 0);
     }
 
-    int popCount() {
-
+    int popCount() const {
         int count = 0;
-
-        for (int i = 0; i < _numBlocks; i++) count += popcnt64(_data[i]);
-
+        for (int i = 0; i < _numBlocks; i++) {
+            count += popcnt64(_data[i]);
+        }    
         return count;
     }
 
-    void exclusiveor(SVector<bool>& v1) {
+    void exclusiveor(const SVector<bool>& v1) const {
         int count = 0;
         block_type t;
         for (int i = 0; i < _numBlocks; i++) {
@@ -230,7 +222,7 @@ public:
         }
     }
 
-    int hammingDIstance(SVector<bool> &other) {
+    int hammingDIstance(const SVector<bool> &other) const {
         int count = 0;
         block_type exclusiveor;
         for (int i = 0; i < _numBlocks; ++i) {
@@ -240,15 +232,11 @@ public:
         return count;
     }
 
-    void mean(SVector<bool> *t1, vector<SVector<bool>*> &objs, vector<int> &weights) {
-
+    static void mean(SVector<bool>* t1, const vector<SVector<bool>*>& objs,
+            const vector<int>& weights) {
         float total = 0.0f;
-
         t1->setAllBlocks(0);
-
-        int *bitCountPerDimension = new int[t1->size()];
-        memset(bitCountPerDimension, 0, t1->size());
-
+        vector<int> bitCountPerDimension(t1->size(), 0);
         int halfCount = 0;
 
         if (weights.size() != 0) {
@@ -269,6 +257,7 @@ public:
             }
             halfCount = objs.size() / 2;
         }
+        
         for (size_t s = 0; s < t1->size(); s++) {
             if (bitCountPerDimension[s] > halfCount) t1->set(s);
         }
@@ -278,7 +267,7 @@ public:
         for (int i = 0; i < _numBlocks; i++) _data[i] = ~_data[i];
     }
 
-    void print() {
+    void print() const {
         size_t count = 0;
 
         for (int i = 0; i < _numBlocks; i++) {
@@ -305,11 +294,10 @@ public:
 #endif
     }
 
-    static int hammingDistance(SVector<bool> &v1, SVector<bool> &v2) {
-
+    static int hammingDistance(const SVector<bool>& v1, const SVector<bool>& v2) {
         int count = 0;
-        size_t numBlocks = v1.getNumBlocks();
-        block_type *data1 = v1.getData(), *data2 = v2.getData();
+        const size_t numBlocks = v1.getNumBlocks();
+        const block_type* data1 = v1.getData(), * data2 = v2.getData();
 
 #if 0
         block_type exor;
@@ -375,6 +363,11 @@ public:
 #endif
     }
 
+private:
+    block_type* _data;
+    int _numBlocks;
+    size_t _length;
+    string _id;
 };
 
 } // namespace lmw
