@@ -35,7 +35,7 @@ namespace lmw {
 template <typename T, typename ACCUMULATOR, typename OPTIMIZER>
 class StreamingEMTree {
 public:
-    explicit StreamingEMTree(Node<T>* root) :
+    explicit StreamingEMTree(const Node<T>* root) :
         _root(new Node<AccumulatorKey>()) {
             _root->setOwnsKeys(true);
             deepCopy(root, _root);
@@ -69,11 +69,11 @@ public:
         return totalRead;
     }
 
-    void visit(ClusterVisitor<T>& visitor) {
+    void visit(ClusterVisitor<T>& visitor) const {
         visit(NULL, _root, visitor);
     }
 
-    void visit(vector<T*>& data, InsertVisitor<T>& visitor) {
+    void visit(vector<T*>& data, InsertVisitor<T>& visitor) const {
         for (T* object : data) {
             visit(_root, object, visitor);
         }
@@ -131,19 +131,19 @@ public:
         clearAccumulators(_root);
     }
 
-    int getMaxLevelCount() {
+    int getMaxLevelCount() const {
         return maxLevelCount(_root);
     }
 
-    int getClusterCount(int depth) {
+    int getClusterCount(int depth) const {
         return clusterCount(_root, depth);
     }
 
-    uint64_t getObjCount() {
+    uint64_t getObjCount() const {
         return objCount(_root);
     }
 
-    double getRMSE() {
+    double getRMSE() const {
         double RMSE = sumSquaredError(_root);
         uint64_t size = getObjCount();
         RMSE /= size;
@@ -178,12 +178,13 @@ private:
     };
 
     struct Accessor {
-        T* operator()(AccumulatorKey* accumulatorKey) {
+        T* operator()(AccumulatorKey* accumulatorKey) const {
             return accumulatorKey->key;
         }
     };
 
-    void visit(T* parentKey, Node<AccumulatorKey>* node, ClusterVisitor<T>& visitor, int level = 1) {
+    void visit(const T* parentKey, const Node<AccumulatorKey>* node,
+            ClusterVisitor<T>& visitor, const int level = 1) const {
         for (size_t i = 0; i < node->size(); i++) {
             auto accumulatorKey = node->getKey(i);
             uint64_t count = objCount(node, i);
@@ -196,11 +197,13 @@ private:
         }
     }
 
-    Nearest<AccumulatorKey> nearestKey(T* object, Node<AccumulatorKey>* node) {
+    Nearest<AccumulatorKey> nearestKey(const T* object,
+            const Node<AccumulatorKey>* node) const {
         return _optimizer.nearest(object, node->getKeys(), _accessor);
     }
 
-    void visit(Node<AccumulatorKey>* node, T* object, InsertVisitor<T>& visitor, int level = 1) {
+    void visit(const Node<AccumulatorKey>* node, const T* object,
+            InsertVisitor<T>& visitor, const int level = 1) const {
         auto nearest = nearestKey(object, node);
         auto accumulatorKey = nearest.key;
         visitor.accept(level, object, accumulatorKey->key, nearest.distance);
@@ -321,7 +324,7 @@ private:
         }
     }
 
-    void deepCopy(Node<T>* src, Node<AccumulatorKey>* dst) {
+    void deepCopy(const Node<T>* src, Node<AccumulatorKey>* dst) {
         if (!src->isEmpty()) {
             size_t dimensions = src->getKey(0)->size();
             for (size_t i = 0; i < src->size(); i++) {
@@ -366,7 +369,7 @@ private:
         });
     }
 
-    double sumSquaredError(Node<AccumulatorKey>* node, size_t i) {
+    double sumSquaredError(const Node<AccumulatorKey>* node, const size_t i) const {
         if (node->isLeaf()) {
             return node->getKey(i)->sumSquaredError;
         } else {
@@ -374,7 +377,7 @@ private:
         }
     }
 
-    double sumSquaredError(Node<AccumulatorKey>* node) {
+    double sumSquaredError(const Node<AccumulatorKey>* node) const {
         if (node->isLeaf()) {
             double localSum = 0;
             for (auto key : node->getKeys()) {
@@ -393,7 +396,7 @@ private:
     /**
      * Object count for cluster i in node.
      */
-    uint64_t objCount(Node<AccumulatorKey>* node, size_t i) {
+    uint64_t objCount(const Node<AccumulatorKey>* node, const size_t i) const {
         if (node->isLeaf()) {
             return node->getKey(i)->count;
         } else {
@@ -401,7 +404,7 @@ private:
         }
     }
 
-    uint64_t objCount(Node<AccumulatorKey>* node) {
+    uint64_t objCount(const Node<AccumulatorKey>* node) const {
         if (node->isLeaf()) {
             uint64_t localCount = 0;
             for (auto key : node->getKeys()) {
@@ -417,7 +420,7 @@ private:
         }
     }
 
-    int maxLevelCount(Node<AccumulatorKey>* current) {
+    int maxLevelCount(const Node<AccumulatorKey>* current) const {
         if (current->isLeaf()) {
             return 1;
         } else {
@@ -429,7 +432,7 @@ private:
         }
     }
 
-    int clusterCount(Node<AccumulatorKey>* current, int depth) {
+    int clusterCount(const Node<AccumulatorKey>* current, const int depth) const {
         if (depth == 1) {
             return current->size();
         } else {

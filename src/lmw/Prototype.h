@@ -1,24 +1,24 @@
 /**
  * This file contains PROTOTYPE functions. It summarizes a list of objects into
  * a single object. It also takes weights for each object into account.
- * 
+ *
  * It works on objects of type T.
- * 
+ *
  * The PROTOTYPE function is called with a pointer to the result, a list of
  * object and a list of weights.
- * 
+ *
  * The only required operation is,
  *      void operator()(T* result, vector<T*> objects, vector<int> weights)
- * 
+ *
  * A PROTOTYPE function MUST be thread safe. Multiple calls to operator() can
  * happen concurrently.
- * 
- * Note that weights can be empty if no weights are present, otherwise the 
+ *
+ * Note that weights can be empty if no weights are present, otherwise the
  * number of objects must match the number of weights,
  *      assert(objects.size() == weight.size())
- * 
+ *
  * For example, floating point vectors can use the mean or median, and bit
- * vectors use a specialized prototype optimized for speed. 
+ * vectors use a specialized prototype optimized for speed.
  */
 
 #ifndef PROTOTYPE_H
@@ -33,8 +33,7 @@ namespace lmw {
 
 template <typename T>
 struct meanPrototype {
-
-    void operator()(T *t1, vector<T*> &objs, vector<int> &weights) const {
+    void operator()(T* t1, const vector<T*>& objs, const vector<int>& weights) const {
         float total = 0.0f;
         t1->setAll(0);
         if (weights.size() != 0) {
@@ -57,12 +56,10 @@ struct meanBitPrototype {
     /**
      * We assume that the length of bit vectors is less than 65536 and greater than 0.
      */
-    void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs,
-            vector<int> &weights) const {
-
+    void operator()(SVector<bool>* t1, const vector<SVector<bool>*>& objs,
+            const vector<int>& weights) const {
         int bitCountPerDimension[65536];
         block_type *data = t1->getData();
-        ;
         int vecSize = t1->size();
         int dataSize = sizeof (data[0]) * 8;
         int numBlocks = t1->getNumBlocks();
@@ -118,8 +115,8 @@ struct meanBitPrototype2 {
     /**
      * We assume that the length of bit vectors is less than 65536 and greater than 0.
      */
-    void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs,
-            vector<int> &weights) const {
+    void operator()(SVector<bool>* t1, const vector<SVector<bool>*>& objs,
+            const vector<int>& weights) const {
         int bitCountPerDimension[65536];
         unsigned short val;
         block_type *data = t1->getData();
@@ -147,7 +144,7 @@ struct meanBitPrototype2 {
                     //std::cout << "\n .. " << (data[i] >> 48);
                     val = data[i];
                     for (int j = 0; j < dataSize; j += 16) {
-                        //std::cout << "\n ''" << ((data[i] >> j) & 65535) << "\n"; 
+                        //std::cout << "\n ''" << ((data[i] >> j) & 65535) << "\n";
                         val = (data[i] >> j) & 65535;
                         //std::cout << "\n" << j << "   " << val;
                         //std::cout << "\n" << val;
@@ -211,8 +208,8 @@ struct meanBitPrototype8 {
     /**
      * We assume that the length of bit vectors is less than 65536 and greater than 0.
      */
-    void operator()(SVector<bool> *t1, vector<SVector<bool>*> &objs,
-            vector<int> &weights) const {
+    void operator()(SVector<bool>* t1, const vector<SVector<bool>*>& objs,
+            const vector<int>& weights) const {
 
         int bitCountPerDimension[65536];
         unsigned short val;
@@ -242,7 +239,7 @@ struct meanBitPrototype8 {
                     //std::cout << "\n .. " << (data[i] >> 48);
                     val = data[i];
                     for (int j = 0; j < dataSize; j += 8) {
-                        //std::cout << "\n ''" << ((data[i] >> j) & 65535) << "\n"; 
+                        //std::cout << "\n ''" << ((data[i] >> j) & 65535) << "\n";
                         val = (data[i] >> j) & 255LL;
                         //std::cout << "\n" << j << "   " << val;
                         //std::cout << "\n" << val;

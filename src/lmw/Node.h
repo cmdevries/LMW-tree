@@ -9,34 +9,38 @@ template <typename T>
 class Node {
 public:
     Node() : _isLeaf(true), _ownsKeys(false) { }
-    
+
     ~Node() {
         for (size_t i = 0; i < size(); i++) {
             remove(i);
         }
     }
 
-    bool isEmpty() {
+    bool isEmpty() const {
         return _keys.empty();
     }
 
-    bool isLeaf() {
+    bool isLeaf() const {
         return _isLeaf;
     }
 
-    int size() {
+    int size() const {
         return _keys.size();
     }
-    
-    bool getOwnsKeys() {
+
+    bool getOwnsKeys() const {
         return _ownsKeys;
     }
-    
-    void setOwnsKeys(bool ownsKeys) {
+
+    void setOwnsKeys(const bool ownsKeys) {
         _ownsKeys = ownsKeys;
     }
 
-    T* getKey(int i) {
+    T* getKey(const int i) {
+        return _keys[i];
+    }
+
+    const T* getKey(const int i) const {
         return _keys[i];
     }
 
@@ -44,10 +48,18 @@ public:
         return _keys;
     }
 
+    const vector<T*>& getKeys() const {
+        return _keys;
+    }
+
     /**
      * pre: !isLeaf()
      */
-    Node* getChild(int i) {
+    Node* getChild(const int i) {
+        return _children[i];
+    }
+
+    const Node* getChild(const int i) const {
         return _children[i];
     }
 
@@ -55,6 +67,10 @@ public:
      * pre: !isLeaf()
      */
     vector<Node*>& getChildren() {
+        return _children;
+    }
+
+    const vector<Node*>& getChildren() const {
         return _children;
     }
 
@@ -97,11 +113,11 @@ public:
         _isLeaf = true;
     }
 
-    void remove(int i) {
+    void remove(const int i) {
         if (_ownsKeys) {
             // Free the memory for the centroid key
             delete _keys[i];
-            _keys[i] = NULL;            
+            _keys[i] = NULL;
         }
         if (!_isLeaf) {
             // Delete associated child node
@@ -122,7 +138,7 @@ public:
             if (_keys[i] == NULL) {
                 toRemove++;
             } else {
-                // Shuffle keys down 
+                // Shuffle keys down
                 _keys[i - toRemove] = _keys[i];
 
                 // Shuffle children down
@@ -141,7 +157,7 @@ public:
             }
         }
     }
-    
+
 private:
     // In Leaf nodes the keys are the data.
     vector<T*> _keys;
@@ -151,7 +167,7 @@ private:
 
     // Does this node have any children?
     bool _isLeaf;
-    
+
     // Will the keys be deleted?
     bool _ownsKeys;
 };
