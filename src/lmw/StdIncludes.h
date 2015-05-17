@@ -54,6 +54,7 @@ using std::hex;
 using std::dec;
 using std::ends;
 using std::move;
+using std::unique_ptr;
 
 using boost::format;
 
@@ -69,7 +70,7 @@ typedef boost::variate_generator<RND_ENG,RND_BERN> RND_BERN_GEN_01;
 
 } // namespace lmw
 
-#endif	
+#endif
 
 
 

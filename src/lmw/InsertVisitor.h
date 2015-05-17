@@ -14,7 +14,7 @@ class InsertVisitor {
 public:
     InsertVisitor() { }
     virtual ~InsertVisitor() { }
-    
+
     /**
      * Must be thread safe. It can be called from multiple threads.
      */
@@ -31,12 +31,12 @@ public:
             stringstream ss;
             ss << filenamePrefix << "_level" << level;
             string filename = ss.str() + "_clusters.txt";
-            ofstream level_stream(filename);
+            _levels.emplace_back(new ofstream(filename.c_str()));
+            ofstream& level_stream = *_levels.back();
             if (!level_stream) {
                 throw std::runtime_error("unable to open " + filename);
-            }    
+            }
             level_stream << "object ID, cluster ID, distance to cluster center" << endl;
-            _levels.push_back(move(level_stream));
         }
     }
 
@@ -44,15 +44,15 @@ public:
             const SVector<bool>* cluster, const double distance) {
         Mutex::scoped_lock lock(_mutexes[level - 1]);
         // using endl here causes the buffer to flush and sync() to be called which slows it down
-        _levels[level - 1] << object->getID() << "," << hex << size_t(cluster)
+        *_levels[level - 1] << object->getID() << "," << hex << size_t(cluster)
             << dec << "," << distance << "\n";
         return;
-    }  
-    
+    }
+
 private:
     typedef tbb::mutex Mutex;
     vector<Mutex> _mutexes;
-    vector<ofstream> _levels;
+    vector<unique_ptr<ofstream>> _levels;
 };
 
 } // namespace LMW
