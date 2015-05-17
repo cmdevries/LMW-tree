@@ -63,7 +63,7 @@ public:
 		_id = id;
 	}
 
-	const string& getID() {
+	const string& getID() const {
 		return _id;
 	}
 
@@ -169,7 +169,7 @@ public:
         _id = id;
     }
 
-    const string& getID() {
+    const string& getID() const {
         return _id;
     }
 

@@ -18,7 +18,8 @@ public:
     /**
      * parentCluster is NULL for root nodes
      */
-    virtual void accept(int level, T* parentCluster, T* cluster, double RMSE, uint64_t objectCount) = 0;    
+    virtual void accept(const int level, const T* parentCluster,
+        const T* cluster, const double RMSE, const uint64_t objectCount) = 0;    
 };
 
 class ClusterStats : public ClusterVisitor<SVector<bool>> {
@@ -27,19 +28,24 @@ public:
         for (int level = 1; level <= levels; level++) {
             stringstream ss;
             ss << filenamePrefix << "_level" << level;
-            ofstream* l = new ofstream(ss.str() + "_stats.txt");
-            *l << "parent cluster ID, cluster ID, RMSE, object count" << endl;
-            _levels.push_back(l);
+            string filename = ss.str() + "_stats.txt";
+            ofstream level_stream(filename);
+            if (!level_stream) {
+                throw runtime_error("unable to open: " + filename);
+            }
+            level_stream << "parent cluster ID, cluster ID, RMSE, object count" << endl;
+            _levels.push_back(move(level_stream));
         }
-        // TODO(cdevries): check state of streams        
     }    
     
-    void accept(int level, SVector<bool>* parentCluster, SVector<bool>* cluster, double RMSE, uint64_t objectCount) {
-        *_levels[level - 1] << hex << size_t(parentCluster) << "," << size_t(cluster) << dec << "," << RMSE << "," << objectCount << endl;
+    void accept(const int level, const SVector<bool>* parentCluster,
+            const SVector<bool>* cluster, const double RMSE, const uint64_t objectCount) {
+        _levels[level - 1] << hex << size_t(parentCluster) << ","
+            << size_t(cluster) << dec << "," << RMSE << "," << objectCount << endl;
     }
-    
+
 private:
-    vector<ofstream*> _levels;
+    vector<ofstream> _levels;
 };
 
 } // namespace lmw

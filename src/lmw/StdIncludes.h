@@ -53,6 +53,7 @@ using std::runtime_error;
 using std::hex;
 using std::dec;
 using std::ends;
+using std::move;
 
 using boost::format;
 
