@@ -140,7 +140,8 @@ void streamingEMTree() {
     insertWriteClusters(emtree);
 }
 
-void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
+void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree,
+                                                const bool memory) {
     // open files
     SVectorStream<SVector<bool>> vs(wikiDocidFile, wikiSignatureFile, wikiSignatureLength);
 
@@ -184,8 +185,38 @@ void streamingMiniBatchEMTreeInsertUpdateReport(StreamingEMTree_t* emtree) {
         std::cout << "------------" << std::endl;
     }
 
-    // clear accumulators for next iteration
-    emtree->clearAccumulators();
+    report(emtree);
+
+    if (memory) {
+        // keep accumulator memory between iterations
+        emtree->clearCountLastPassAndSSE();
+    } else {
+        // clear accumulators for next iteration
+        emtree->clearAccumulators();
+    }
+}
+
+void streamingMiniBatchEMTreeWithMemory() {
+    // initialize TBB
+    const bool parallel = true;
+    if (parallel) {
+        tbb::task_scheduler_init init_parallel;
+    } else {
+        tbb::task_scheduler_init init_serial(1);
+    }
+
+    // streaming EMTree
+    StreamingEMTree_t* emtree = streamingEMTreeInit();
+    cout << endl << "Streaming EM-tree:" << endl;
+    const int maxIters = 10;
+    for (int i = 0; i < maxIters - 1; i++) {
+        cout << "ITERATION " << i << endl;
+        bool memory = true;
+        streamingMiniBatchEMTreeInsertUpdateReport(emtree, memory);
+    }
+
+    // last iteration writes cluster assignments and does not update accumulators
+    insertWriteClusters(emtree);
 }
 
 void streamingMiniBatchEMTree() {
@@ -200,10 +231,11 @@ void streamingMiniBatchEMTree() {
     // streaming EMTree
     StreamingEMTree_t* emtree = streamingEMTreeInit();
     cout << endl << "Streaming EM-tree:" << endl;
-    const int maxIters = 2;
+    const int maxIters = 10;
     for (int i = 0; i < maxIters - 1; i++) {
         cout << "ITERATION " << i << endl;
-        streamingMiniBatchEMTreeInsertUpdateReport(emtree);
+        bool memory = false;
+        streamingMiniBatchEMTreeInsertUpdateReport(emtree, memory);
     }
 
     // last iteration writes cluster assignments and does not update accumulators

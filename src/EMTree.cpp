@@ -10,7 +10,9 @@
 int main(int argc, char** argv) {
     std::srand(std::time(0));
 
-    if (false) {
+    if (true) {
+        streamingMiniBatchEMTreeWithMemory();
+    } else if (true) {
         streamingMiniBatchEMTree();
     } else if (true) {
         streamingEMTree();

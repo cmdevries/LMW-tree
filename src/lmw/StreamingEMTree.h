@@ -131,6 +131,10 @@ public:
         clearAccumulators(_root);
     }
 
+    void clearCountLastPassAndSSE() {
+        clearCountLastPassAndSSE(_root);
+    }
+
     int getMaxLevelCount() const {
         return maxLevelCount(_root);
     }
@@ -143,9 +147,13 @@ public:
         return objCount(_root);
     }
 
+    uint64_t getObjCountLastPass() const {
+        return objCountLastPass(_root);
+    }
+
     double getRMSE() const {
         double RMSE = sumSquaredError(_root);
-        uint64_t size = getObjCount();
+        uint64_t size = getObjCountLastPass();
         RMSE /= size;
         RMSE = sqrt(RMSE);
         return RMSE;
@@ -156,7 +164,7 @@ private:
 
     struct AccumulatorKey {
         AccumulatorKey() : key(NULL), sumSquaredError(0), accumulator(NULL),
-                count(0),  mutex(NULL) { }
+                count(0),  countLastPass(0), mutex(NULL) { }
 
         ~AccumulatorKey() {
             if (key) {
@@ -174,6 +182,7 @@ private:
         double sumSquaredError;
         ACCUMULATOR* accumulator; // accumulator for partially updated key
         uint64_t count; // how many vectors have been added to accumulator
+        uint64_t countLastPass; // how many vectors added in last pass, needed for RMSE
         Mutex* mutex;
     };
 
@@ -187,7 +196,7 @@ private:
             ClusterVisitor<T>& visitor, const int level = 1) const {
         for (size_t i = 0; i < node->size(); i++) {
             auto accumulatorKey = node->getKey(i);
-            uint64_t count = objCount(node, i);
+            uint64_t count = objCountLastPass(node, i);
             double SSE = sumSquaredError(node, i);
             double RMSE = sqrt(SSE / count);
             visitor.accept(level, parentKey, accumulatorKey->key, RMSE, count);
@@ -213,6 +222,7 @@ private:
             accumulatorKey->sumSquaredError +=
                     _optimizer.squaredDistance(object, accumulatorKey->key);
             accumulatorKey->count++;
+            accumulatorKey->countLastPass++;
         } else {
             visit(node->getChild(nearest.index), object, visitor, level + 1);
         }
@@ -231,6 +241,7 @@ private:
                 (*accumulator)[i] += (*object)[i];
             }
             accumulatorKey->count++;
+            accumulatorKey->countLastPass++;
         } else {
             insert(node->getChild(nearest.index), object);
         }
@@ -316,10 +327,24 @@ private:
                 accumulatorKey->sumSquaredError = 0;
                 accumulatorKey->accumulator->setAll(0);
                 accumulatorKey->count = 0;
+                accumulatorKey->countLastPass = 0;
             }
         } else {
             for (auto child : node->getChildren()) {
                 clearAccumulators(child);
+            }
+        }
+    }
+
+    void clearCountLastPassAndSSE(Node<AccumulatorKey>* node) {
+        if (node->isLeaf()) {
+            for (auto accumulatorKey : node->getKeys()) {
+                accumulatorKey->sumSquaredError = 0;
+                accumulatorKey->countLastPass = 0;
+            }
+        } else {
+            for (auto child : node->getChildren()) {
+                clearCountLastPassAndSSE(child);
             }
         }
     }
@@ -415,6 +440,30 @@ private:
             uint64_t localCount = 0;
             for (auto child : node->getChildren()) {
                 localCount += objCount(child);
+            }
+            return localCount;
+        }
+    }
+
+    uint64_t objCountLastPass(const Node<AccumulatorKey>* node, const size_t i) const {
+        if (node->isLeaf()) {
+            return node->getKey(i)->countLastPass;
+        } else {
+            return objCountLastPass(node->getChild(i));
+        }
+    }
+
+    uint64_t objCountLastPass(const Node<AccumulatorKey>* node) const {
+        if (node->isLeaf()) {
+            uint64_t localCount = 0;
+            for (auto key : node->getKeys()) {
+                localCount += key->countLastPass;
+            }
+            return localCount;
+        } else {
+            uint64_t localCount = 0;
+            for (auto child : node->getChildren()) {
+                localCount += objCountLastPass(child);
             }
             return localCount;
         }
