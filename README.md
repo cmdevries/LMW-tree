@@ -1,7 +1,7 @@
 LMW-tree: learning m-way tree
 =============================
 
-See the [K-tree project homepage](http://ktree.sf.net) for the latest news!
+See the [project homepage](http://lmwtree.devries.ninja) for the latest news!
 
 LMW-tree is a generic template library written in C++ that implements several
 algorithms that use the m-way nearest neighbor tree structre to store their
