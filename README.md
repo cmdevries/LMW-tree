@@ -4,7 +4,7 @@ LMW-tree: learning m-way tree
 See the [project homepage](http://lmwtree.devries.ninja) for the latest news!
 
 LMW-tree is a generic template library written in C++ that implements several
-algorithms that use the m-way nearest neighbor tree structre to store their
+algorithms that use the m-way nearest neighbor tree structure to store their
 data. See the related [PhD thesis](http://eprints.qut.edu.au/75862/) for more
 details on m-way nn trees. The algorithms and data structures are generic to
 support different data representations such as dense real valued and bit
